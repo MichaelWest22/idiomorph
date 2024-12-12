@@ -78,7 +78,7 @@
  * @param {Element | Document} oldNode
  * @param {Element | Node | HTMLCollection | Node[] | string | null} newContent
  * @param {Config} [config]
- * @returns {undefined | HTMLCollection | Node[]}
+ * @returns {undefined | Node[]}
  */
 
 // base IIFE to define idiomorph
@@ -152,7 +152,7 @@ var Idiomorph = (function () {
          * @param {Element | Document} oldNode
          * @param {Element | Node | HTMLCollection | Node[] | string | null} newContent
          * @param {Config} [config]
-         * @returns {undefined | HTMLCollection | Node[]}
+         * @returns {undefined | Node[]}
          */
         function morph(oldNode, newContent, config = {}) {
 
@@ -176,7 +176,7 @@ var Idiomorph = (function () {
          * @param {Element} oldNode
          * @param {Element} normalizedNewContent
          * @param {MorphContext} ctx
-         * @returns {undefined | HTMLCollection| Node[]}
+         * @returns {undefined | Node[]}
          */
         function morphNormalizedContent(oldNode, normalizedNewContent, ctx) {
             if (ctx.head.block) {
