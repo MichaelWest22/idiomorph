@@ -23,8 +23,8 @@ describe("Two-pass option for retaining more state", function(){
         `;
         Idiomorph.morph(getWorkArea(), finalSrc, {morphStyle:'innerHTML'});
 
-        document.getElementById("first").indeterminate.should.be.false
-        document.getElementById("second").indeterminate.should.be.true
+        const states = Array.from(getWorkArea().querySelectorAll("input")).map(e => e.indeterminate);
+        states.should.eql([true, false]);
     });
 
     it('preserves all non-attribute element state with two-pass option', function()
@@ -46,7 +46,7 @@ describe("Two-pass option for retaining more state", function(){
         `;
         Idiomorph.morph(getWorkArea(), finalSrc, {morphStyle:'innerHTML',twoPass:true});
 
-        document.getElementById("first").indeterminate.should.be.true
-        document.getElementById("second").indeterminate.should.be.true
+        const states = Array.from(getWorkArea().querySelectorAll("input")).map(e => e.indeterminate);
+        states.should.eql([true, true]);
     });
 });

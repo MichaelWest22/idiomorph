@@ -201,7 +201,7 @@ var Idiomorph = (function () {
 
                 // innerHTML, so we are only updating the children
                 morphChildren(normalizedNewContent, oldNode, ctx);
-                if (ctx.twoPass) {
+                if (ctx.pantry) {
                     restoreFromPantry(oldNode, ctx);
                 }
                 return Array.from(oldNode.children);
@@ -1075,7 +1075,7 @@ var Idiomorph = (function () {
             removeIdsFromConsideration(ctx, tempNode)
             if (ctx.callbacks.beforeNodeRemoved(tempNode) === false) return;
             if (ctx.pantry) {
-                moveToPantry(tempNode.pantry, ctx);
+                moveToPantry(tempNode, ctx);
             } else {
                 tempNode.parentNode?.removeChild(tempNode);
             }
@@ -1083,8 +1083,6 @@ var Idiomorph = (function () {
         }
 
         function moveToPantry(node, ctx) {
-            if (!node) return;
-
             // If the node is a leaf (no children), process it, and then we're done
             if (!node.children || node.children.length === 0) {
                 if (node.id) {
@@ -1099,6 +1097,7 @@ var Idiomorph = (function () {
 
                 // After processing children, process the current node
                 if (node.id) {
+                    node.innerHTML = '';
                     ctx.pantry.appendChild(node);
                 }
             }
@@ -1106,12 +1105,12 @@ var Idiomorph = (function () {
 
         function restoreFromPantry(root, ctx) {
             Array.from(ctx.pantry.children).forEach(element => {
-                const matchElement = root.findElementById(element.id);
+                const matchElement = root.querySelector(`#${element.id}`);
                 if (matchElement) {
                     matchElement.before(element);
                     element.replaceChildren(matchElement.childNodes);
+                    syncNodeFrom(matchElement, element, ctx);
                     matchElement.remove();
-                    syncNodeFrom(newContent, oldNode, ctx);
                 }
             });
             ctx.pantry.remove();
