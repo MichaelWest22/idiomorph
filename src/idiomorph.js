@@ -201,6 +201,9 @@ var Idiomorph = (function () {
 
                 // innerHTML, so we are only updating the children
                 morphChildren(normalizedNewContent, oldNode, ctx);
+                if (ctx.pantry) {
+                    restoreFromPantry(oldNode, ctx);
+                }
                 return Array.from(oldNode.children);
 
             } else if (ctx.morphStyle === "outerHTML" || ctx.morphStyle == null) {
@@ -713,9 +716,17 @@ var Idiomorph = (function () {
                 ignoreActiveValue: mergedConfig.ignoreActiveValue,
                 idMap: createIdMap(oldNode, newContent),
                 deadIds: new Set(),
+                pantry: mergedConfig.twoPass && createPantry(),
                 callbacks: mergedConfig.callbacks,
                 head: mergedConfig.head
             }
+        }
+
+        function createPantry() {
+            const pantry = document.createElement("div");
+            pantry.hidden = true;
+            document.body.insertAdjacentHTML("afterend", pantry);
+            return pantry;
         }
 
         /**
@@ -1063,9 +1074,46 @@ var Idiomorph = (function () {
         function removeNode(tempNode, ctx) {
             removeIdsFromConsideration(ctx, tempNode)
             if (ctx.callbacks.beforeNodeRemoved(tempNode) === false) return;
-
-            tempNode.parentNode?.removeChild(tempNode);
+            if (ctx.pantry) {
+                moveToPantry(tempNode, ctx);
+            } else {
+                tempNode.parentNode?.removeChild(tempNode);
+            }
             ctx.callbacks.afterNodeRemoved(tempNode);
+        }
+
+        function moveToPantry(node, ctx) {
+            // If the node is a leaf (no children), process it, and then we're done
+            if (!node.children || node.children.length === 0) {
+                if (node.id) {
+                    ctx.pantry.appendChild(node);
+                }
+
+            // otherwise we need to process the children first
+            } else {
+                Array.from(node.children).forEach(child => {
+                    moveToPantry(child, ctx);
+                });
+
+                // After processing children, process the current node
+                if (node.id) {
+                    node.innerHTML = '';
+                    ctx.pantry.appendChild(node);
+                }
+            }
+        }
+
+        function restoreFromPantry(root, ctx) {
+            Array.from(ctx.pantry.children).forEach(element => {
+                const matchElement = root.querySelector(`#${element.id}`);
+                if (matchElement) {
+                    matchElement.before(element);
+                    element.replaceChildren(matchElement.childNodes);
+                    syncNodeFrom(matchElement, element, ctx);
+                    matchElement.remove();
+                }
+            });
+            ctx.pantry.remove();
         }
 
         //=============================================================================
