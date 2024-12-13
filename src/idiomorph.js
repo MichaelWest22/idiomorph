@@ -1101,7 +1101,7 @@ var Idiomorph = (function () {
                         // @ts-ignore - use proposed moveBefore feature
                         if (ctx.pantry.moveBefore) {
                             // @ts-ignore - use proposed moveBefore feature
-                            ctx.pantry.moveBefore(node);
+                            ctx.pantry.moveBefore(node, null);
                         } else {
                             ctx.pantry.insertBefore(node, null);
                         }
