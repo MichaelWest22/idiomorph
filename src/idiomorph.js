@@ -1137,9 +1137,9 @@ var Idiomorph = (function () {
                         } else {
                             matchElement.before(element);
                         }
-                        if (matchElement.childNodes.length > 0) {
+                        //if (matchElement.childNodes.length > 0) {
                             element.replaceChildren(...matchElement.childNodes);
-                        }
+                        //}
                         syncNodeFrom(matchElement, element, ctx);
                         matchElement.remove();
                     }
