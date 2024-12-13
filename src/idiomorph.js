@@ -224,7 +224,11 @@ var Idiomorph = (function () {
                     // if there was a best match, merge the siblings in too and return the
                     // whole bunch
                     if (morphedNode) {
-                        return insertSiblings(previousSibling, morphedNode, nextSibling);
+                        const elements = insertSiblings(previousSibling, morphedNode, nextSibling);
+                        if (ctx.pantry) {
+                            restoreFromPantry(morphedNode.parentNode, ctx);
+                        }
+                        return elements
                     }
                 } else {
                     // otherwise nothing was added to the DOM
