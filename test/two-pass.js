@@ -21,7 +21,7 @@ describe("Two-pass option for retaining more state", function(){
               <input type="checkbox" id="first">
             </div>
         `;
-        Idiomorph.morph(getWorkArea(), finalSrc, {morphStyle:'innerHTML'});
+        Idiomorph.morph(getWorkArea(), finalSrc, {morphStyle:'innerHTML', twoPass:false});
 
         getWorkArea().innerHTML.should.equal(finalSrc);
         const states = Array.from(getWorkArea().querySelectorAll("input")).map(e => e.indeterminate);
