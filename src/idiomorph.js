@@ -346,12 +346,19 @@ var Idiomorph = (function () {
 
                 // if we are at the end of the exiting parent's children, just append
                 if (insertionPoint == null) {
-                    if (ctx.callbacks.beforeNodeAdded(newChild) === false) continue;
+                    if (ctx.pantry && ctx.persistentIds.has(newChild.id)) {
+                        oldParent.appendChild(newChild);
+                        removeIdsFromConsideration(ctx, newChild);
+                        continue;
 
-                    oldParent.appendChild(newChild);
-                    ctx.callbacks.afterNodeAdded(newChild);
-                    removeIdsFromConsideration(ctx, newChild);
-                    continue;
+                    } else {
+                        if (ctx.callbacks.beforeNodeAdded(newChild) === false) continue;
+
+                        oldParent.appendChild(newChild);
+                        ctx.callbacks.afterNodeAdded(newChild);
+                        removeIdsFromConsideration(ctx, newChild);
+                        continue;
+                    }
                 }
 
                 // if the current node has an id set match then morph
@@ -386,11 +393,17 @@ var Idiomorph = (function () {
 
                 // abandon all hope of morphing, just insert the new child before the insertion point
                 // and move on
-                if (ctx.callbacks.beforeNodeAdded(newChild) === false) continue;
+                if (ctx.pantry && ctx.persistentIds.has(newChild.id)) {
+                    oldParent.insertBefore(newChild, insertionPoint);
+                    removeIdsFromConsideration(ctx, newChild);
 
-                oldParent.insertBefore(newChild, insertionPoint);
-                ctx.callbacks.afterNodeAdded(newChild);
-                removeIdsFromConsideration(ctx, newChild);
+                } else {
+                    if (ctx.callbacks.beforeNodeAdded(newChild) === false) continue;
+
+                    oldParent.insertBefore(newChild, insertionPoint);
+                    ctx.callbacks.afterNodeAdded(newChild);
+                    removeIdsFromConsideration(ctx, newChild);
+                }
             }
 
             // remove any remaining old nodes that didn't match up with new content
@@ -1087,13 +1100,13 @@ var Idiomorph = (function () {
         //   places where tempNode may be just a Node, not an Element
         function removeNode(tempNode, ctx) {
             removeIdsFromConsideration(ctx, tempNode)
-            if (ctx.callbacks.beforeNodeRemoved(tempNode) === false) return;
-            if (ctx.pantry && tempNode instanceof Element) {
+            if (ctx.pantry && ctx.persistentIds.has(tempNode.id)) {
                 moveToPantry(tempNode, ctx);
             } else {
+                if (ctx.callbacks.beforeNodeRemoved(tempNode) === false) return;
                 tempNode.parentNode?.removeChild(tempNode);
+                ctx.callbacks.afterNodeRemoved(tempNode);
             }
-            ctx.callbacks.afterNodeRemoved(tempNode);
         }
 
         /**
@@ -1156,7 +1169,10 @@ var Idiomorph = (function () {
                                 element.insertBefore(matchElement.firstChild,null)
                             }
                         }
-                        syncNodeFrom(matchElement, element, ctx);
+                        if (ctx.callbacks.beforeNodeMorphed(element, matchElement) !== false) {
+                            syncNodeFrom(matchElement, element, ctx);
+                            ctx.callbacks.afterNodeMorphed(element, matchElement);
+                        }
                         matchElement.remove();
                     }
                 });

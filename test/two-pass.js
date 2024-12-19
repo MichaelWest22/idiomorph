@@ -293,4 +293,63 @@ describe("Two-pass option for retaining more state", function(){
           console.log('preserves focus state when parents are reorderd test needs moveBefore enabled to work properly')
         }
     });
+
+    it('hooks work as expected', function()
+    {
+        let beginSrc =`
+            <div>
+              <input type="checkbox" id="first">
+              <input type="checkbox" id="second">
+            </div>
+        `.trim();
+        getWorkArea().append(make(beginSrc));
+
+        let finalSrc = `
+            <div>
+              <input type="checkbox" id="second">
+              <input type="checkbox" id="first">
+            </div>
+        `.trim();
+
+        let wrongHookCalls = [];
+        let wrongHookHandler = name => {
+            return node => {
+                if (node.nodeType !== Node.ELEMENT_NODE) return;
+                wrongHookCalls.push([name, node.outerHTML]);
+            }
+        }
+
+        let calls = [];
+
+        Idiomorph.morph(getWorkArea(), finalSrc, {morphStyle:'innerHTML',twoPass:true,callbacks:{
+            beforeNodeAdded: wrongHookHandler("beforeNodeAdded"),
+            afterNodeAdded: wrongHookHandler("afterNodeAdded"),
+            beforeNodeRemoved: wrongHookHandler("beforeNodeRemoved"),
+            afterNodeRemoved: wrongHookHandler("afterNodeRemoved"),
+            beforeNodeMorphed: (oldNode, newNode) => {
+                if (oldNode.nodeType !== Node.ELEMENT_NODE) return;
+                calls.push(["before", oldNode.outerHTML, newNode.outerHTML]);
+            },
+            afterNodeMorphed: (oldNode, newNode) => {
+                if (oldNode.nodeType !== Node.ELEMENT_NODE) return;
+                calls.push(["after", oldNode.outerHTML, newNode.outerHTML]);
+            },
+        }});
+
+        getWorkArea().innerHTML.should.equal(finalSrc);
+
+        wrongHookCalls.should.eql([]);
+        calls.should.eql([
+            ["before", beginSrc, finalSrc],
+            ["before", `<input type="checkbox" id="second">`, `<input type="checkbox" id="second">`],
+            ["after", `<input type="checkbox" id="second">`, `<input type="checkbox" id="second">`],
+            ["after",
+              finalSrc,
+              "<div>\n              <input type=\"checkbox\" id=\"second\">\n              </div>",
+            ],
+            ["before", `<input type="checkbox" id="first">`, `<input type="checkbox" id="first">`],
+            ["after", `<input type="checkbox" id="first">`, `<input type="checkbox" id="first">`],
+        ]);
+
+    });
 });
