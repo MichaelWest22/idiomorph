@@ -346,7 +346,7 @@ var Idiomorph = (function () {
 
                 // if we are at the end of the exiting parent's children, just append
                 if (insertionPoint == null) {
-                    if (ctx.pantry && ctx.persistentIds.has(newChild.id)) {
+                    if (ctx.pantry && ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
                         oldParent.appendChild(newChild);
                         removeIdsFromConsideration(ctx, newChild);
                         continue;
@@ -393,7 +393,7 @@ var Idiomorph = (function () {
 
                 // abandon all hope of morphing, just insert the new child before the insertion point
                 // and move on
-                if (ctx.pantry && ctx.persistentIds.has(newChild.id)) {
+                if (ctx.pantry && ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
                     oldParent.insertBefore(newChild, insertionPoint);
                     removeIdsFromConsideration(ctx, newChild);
 
@@ -1100,7 +1100,8 @@ var Idiomorph = (function () {
         //   places where tempNode may be just a Node, not an Element
         function removeNode(tempNode, ctx) {
             removeIdsFromConsideration(ctx, tempNode)
-            if (ctx.pantry && ctx.persistentIds.has(tempNode.id)) {
+            // @ts-ignore - use new set intersection feature
+            if (ctx.pantry && ctx.idMap.get(tempNode)?.intersection(ctx.persistentIds).size > 0 && tempNode instanceof Element) {
                 moveToPantry(tempNode, ctx);
             } else {
                 if (ctx.callbacks.beforeNodeRemoved(tempNode) === false) return;
@@ -1118,7 +1119,7 @@ var Idiomorph = (function () {
             if (ctx.pantry instanceof HTMLDivElement) {
                 // If the node is a leaf (no children), process it, and then we're done
                 if (!node.hasChildNodes()) {
-                    if (node.id) {
+                    if (ctx.persistentIds.has(node.id)) {
                         // @ts-ignore - use proposed moveBefore feature
                         if (ctx.pantry.moveBefore) {
                             // @ts-ignore - use proposed moveBefore feature
@@ -1126,6 +1127,10 @@ var Idiomorph = (function () {
                         } else {
                             ctx.pantry.insertBefore(node, null);
                         }
+                    } else {
+                        if (ctx.callbacks.beforeNodeRemoved(node) === false) return;
+                        node.parentNode?.removeChild(node);
+                        ctx.callbacks.afterNodeRemoved(node);
                     }
 
                 // otherwise we need to process the children first
@@ -1135,11 +1140,13 @@ var Idiomorph = (function () {
                     });
 
                     // After processing children, process the current node
-                    if (node.id) {
+                    if (ctx.persistentIds.has(node.id)) {
                         node.innerHTML = '';
                         ctx.pantry.appendChild(node);
                     } else {
+                        if (ctx.callbacks.beforeNodeRemoved(node) === false) return;
                         node.parentNode?.removeChild(node);
+                        ctx.callbacks.afterNodeRemoved(node);
                     }
                 }
             }
