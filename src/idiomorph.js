@@ -1100,8 +1100,7 @@ var Idiomorph = (function () {
         //   places where tempNode may be just a Node, not an Element
         function removeNode(tempNode, ctx) {
             removeIdsFromConsideration(ctx, tempNode)
-            // @ts-ignore - use new set intersection feature
-            if (ctx.pantry && ctx.idMap.get(tempNode)?.intersection(ctx.persistentIds).size > 0 && tempNode instanceof Element) {
+            if (ctx.pantry && hasPersistentIdNodes(ctx, tempNode) && tempNode instanceof Element) {                
                 moveToPantry(tempNode, ctx);
             } else {
                 if (ctx.callbacks.beforeNodeRemoved(tempNode) === false) return;
@@ -1226,6 +1225,21 @@ var Idiomorph = (function () {
             }
         }
 
+        /**
+         *
+         * @param {MorphContext} ctx
+         * @param {Node} node
+         * @returns {boolean}
+         */
+        function hasPersistentIdNodes(ctx, node) {
+            for (const id of ctx.idMap.get(node) || EMPTY_SET) {
+                if (ctx.persistentIds.has(id)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
         /**
          *
          * @param {MorphContext} ctx
