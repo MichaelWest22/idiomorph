@@ -428,4 +428,45 @@ describe("Two-pass option for retaining more state", function () {
       ],
     ]);
   });
+
+  it("duplicate ids on elements aborts twoPass matching to avoid invalid morph state", function () {
+    // twoPass can try and reuse existing id's where possible and has to exclude matching on duplicate ids
+    // to avoid losing content
+    getWorkArea().append(
+      make(`
+            <div>
+              <div id="left">
+                <input type="text" id="first" value="first1">
+                <input type="text" id="first" value="first2">
+              </div>
+              <div id="right">
+                <input type="text" id="second" value="second1">
+                <input type="text" id="second" value="second2">
+              </div>
+            </div>
+        `),
+    );
+    document.getElementById("first").focus();
+
+    let finalSrc = `
+            <div>
+              <div id="left">
+                <input type="text" id="second" value="second1">
+                <input type="text" id="second" value="second2">
+              </div>
+              <div id="right">
+                <input type="text" id="first" value="first1">
+                <input type="text" id="first" value="first2">
+              </div>
+            </div>
+        `;
+    Idiomorph.morph(getWorkArea(), finalSrc, {
+      morphStyle: "innerHTML",
+      twoPass: true,
+    });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    // should have lost active element focus because duplicate ids can not be processed properly
+    document.activeElement.outerHTML.should.equal(document.body.outerHTML);
+  });
 });

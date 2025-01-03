@@ -1415,13 +1415,28 @@ var Idiomorph = (function () {
    * @returns {Set<string>} the id set of all persistent nodes that exist in both old and new content
    */
   function createPersistentIds(oldContent, newContent) {
-    const toIdTagName = (node) => node.tagName + "#" + node.id;
-    const oldIdSet = new Set(nodesWithIds(oldContent).map(toIdTagName));
-
+    let oldIdMap = new Map();
+    let dupSet = new Set();
+    for (const oldNode of nodesWithIds(oldContent)) {
+      const id = oldNode.id;
+      // if already in map then log duplicates to be skipped
+      if (oldIdMap.get(id)) {
+        dupSet.add(id);
+      } else {
+        oldIdMap.set(id,oldNode.tagName);
+      }
+    }
     let matchIdSet = new Set();
     for (const newNode of nodesWithIds(newContent)) {
-      if (oldIdSet.has(toIdTagName(newNode))) {
-        matchIdSet.add(newNode.id);
+      const id = newNode.id;
+      const oldTagName = oldIdMap.get(id)
+      // if already matched skip id as duplicate but also skip if tag types mismatch because it could match later
+      if (matchIdSet.has(id) || (oldTagName && oldTagName !== newNode.tagName)) {
+        dupSet.add(id);
+        matchIdSet.delete(id);
+      }
+      if (oldTagName === newNode.tagName && !dupSet.has(id)) {
+        matchIdSet.add(id);
       }
     }
     return matchIdSet;
