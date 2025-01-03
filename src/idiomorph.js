@@ -204,9 +204,7 @@ var Idiomorph = (function () {
     if (ctx.morphStyle === "innerHTML") {
       // innerHTML, so we are only updating the children
       morphChildren(normalizedNewContent, oldNode, ctx);
-      if (ctx.config.twoPass) {
-        ctx.pantry.remove();
-      }
+      ctx.pantry.remove();
       return Array.from(oldNode.children);
     } else if (ctx.morphStyle === "outerHTML" || ctx.morphStyle == null) {
       // otherwise find the best element match in the new content, morph that, and merge its siblings
@@ -229,9 +227,7 @@ var Idiomorph = (function () {
             morphedNode,
             nextSibling,
           );
-          if (ctx.config.twoPass) {
-            ctx.pantry.remove();
-          }
+          ctx.pantry.remove();
           return elements;
         }
       } else {
@@ -365,10 +361,7 @@ var Idiomorph = (function () {
 
       // if we are at the end of the exiting parent's children, just append
       if (insertionPoint == null) {
-        if (
-          ctx.config.twoPass &&
-          ctx.persistentIds.has(/** @type {Element} */ (newChild).id)
-        ) {
+        if (ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
           const movedChild = moveBeforeById(
             oldParent,
             /** @type {Element} */ (newChild).id,
@@ -448,10 +441,7 @@ var Idiomorph = (function () {
       // abandon all hope of morphing, just insert the new child before the insertion point
       // and move on
 
-      if (
-        ctx.config.twoPass &&
-        ctx.persistentIds.has(/** @type {Element} */ (newChild).id)
-      ) {
+      if (ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
         const movedChild = moveBeforeById(
           oldParent,
           /** @type {Element} */ (newChild).id,
