@@ -570,9 +570,7 @@ var Idiomorph = (function () {
     // TODO: prefer set/getAttribute here
     if (!(from instanceof Element && to instanceof Element)) return;
     // @ts-ignore this function is only used on boolean attrs that are reflected as dom properties
-    const fromLiveValue = from[attributeName],
-      // @ts-ignore ditto
-      toLiveValue = to[attributeName];
+    const fromLiveValue = from[attributeName], toLiveValue = to[attributeName];
     if (fromLiveValue !== toLiveValue) {
       let ignoreUpdate = ignoreAttribute(attributeName, to, "update", ctx);
       if (!ignoreUpdate) {
@@ -1422,12 +1420,28 @@ var Idiomorph = (function () {
    * @returns {Set<string>} the id set of all persistent nodes that exist in both old and new content
    */
   function createPersistentIds(oldContent, newContent) {
-    const oldIdSet = new Set(elementsWithIds(oldContent).map(toIdTagName));
-
+    let oldIdMap = new Map();
+    let dupSet = new Set();
+    for (const oldNode of elementsWithIds(oldContent)) {
+      const id = oldNode.id;
+      // if already in map then log duplicates to be skipped
+      if (oldIdMap.get(id)) {
+        dupSet.add(id);
+      } else {
+        oldIdMap.set(id,oldNode.tagName);
+      }
+    }
     let matchIdSet = new Set();
-    for (const newElement of elementsWithIds(newContent)) {
-      if (oldIdSet.has(toIdTagName(newElement))) {
-        matchIdSet.add(newElement.id);
+    for (const newNode of elementsWithIds(newContent)) {
+      const id = newNode.id;
+      const oldTagName = oldIdMap.get(id)
+      // if already matched skip id as duplicate but also skip if tag types mismatch because it could match later
+      if (matchIdSet.has(id) || (oldTagName && oldTagName !== newNode.tagName)) {
+        dupSet.add(id);
+        matchIdSet.delete(id);
+      }
+      if (oldTagName === newNode.tagName && !dupSet.has(id)) {
+        matchIdSet.add(id);
       }
     }
     return matchIdSet;
