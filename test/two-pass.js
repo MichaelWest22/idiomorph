@@ -527,4 +527,57 @@ describe("Two-pass option for retaining more state", function () {
     // should have lost active element focus because duplicate ids can not be processed properly
     document.activeElement.outerHTML.should.equal(document.body.outerHTML);
   });
+
+  it.only("show outerHTML does not handle prserving state with singlePass and multiple top level nodes", function () {
+  // when using outerHTML you can replace one node with two nodes with the state preserving items split and it will just
+  // pick one node to morph and just replace the other one without preserving any state.
+   const div = make(`
+            <div>
+              <input type="checkbox" id="first">
+              <input type="checkbox" id="second">
+            </div>
+        `);
+    getWorkArea().append(div);
+    document.getElementById("first").indeterminate = true;
+    document.getElementById("second").indeterminate = true;
+
+    let finalSrc = `
+            <div>
+              <input type="checkbox" id="second">
+            </div>
+            <input type="checkbox" id="first">
+        `;
+    Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML", twoPass: true });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    const states = Array.from(getWorkArea().querySelectorAll("input")).map(
+      (e) => e.indeterminate,
+    );
+    states.should.eql([true, true]);
+  });
+
+  it.only("show singlePass does not handle preserving state when softmatch is not possible at higher level", function () {
+    // just changing the type from div to span of the wrapper causes softmatch to fail so it abandons all hope
+    // of morphing and clones the node before using insertBefore and loses child preserved id's
+    const div = make(`
+             <div>
+               <div><input type="checkbox" id="first"></div>
+             </div>
+         `);
+     getWorkArea().append(div);
+     document.getElementById("first").indeterminate = true;
+ 
+     let finalSrc = `
+             <div>
+               <span><input type="checkbox" id="first"></span>
+             </div>
+         `;
+     Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML", twoPass: true });
+ 
+     getWorkArea().innerHTML.should.equal(finalSrc);
+     const states = Array.from(getWorkArea().querySelectorAll("input")).map(
+       (e) => e.indeterminate,
+     );
+     states.should.eql([true]);
+   });
 });
