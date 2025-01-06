@@ -257,37 +257,37 @@ var Idiomorph = (function () {
     );
   }
 
-/**
+  /**
    * @param {Element | null} oldParent 
    * @param {Node} newChild new content to merge
    * @param {Node | null} insertionPoint insertion point to place content before
    * @param {MorphContext} ctx the merge context
    */
-function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
-  if (oldParent == null) return
-  if (ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
-    const movedChild = moveBeforeById(
-      oldParent,
-      /** @type {Element} */ (newChild).id,
-      insertionPoint,
-      ctx,
-    );
-    morphOldNodeTo(movedChild, newChild, ctx);
-  } else {
-    if (ctx.callbacks.beforeNodeAdded(newChild) === false) return;
-    if (hasPersistentIdNodes(ctx,newChild) && newChild instanceof Element) {
-      const newEmptyChild = document.createElement(newChild.tagName)
-      oldParent.insertBefore(newEmptyChild, insertionPoint);
-      morphOldNodeTo(newEmptyChild, newChild, ctx)
-      ctx.callbacks.afterNodeAdded(newEmptyChild);
+  function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
+    if (oldParent == null) return;
+    if (ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
+      const movedChild = moveBeforeById(
+        oldParent,
+        /** @type {Element} */ (newChild).id,
+        insertionPoint,
+        ctx,
+      );
+      morphOldNodeTo(movedChild, newChild, ctx);
     } else {
-      const newClonedChild = document.importNode(newChild, true); // clone as to not mutate newParent
-      oldParent.insertBefore(newClonedChild, insertionPoint);
-      ctx.callbacks.afterNodeAdded(newClonedChild);
+      if (ctx.callbacks.beforeNodeAdded(newChild) === false) return;
+      if (hasPersistentIdNodes(ctx,newChild) && newChild instanceof Element) {
+        const newEmptyChild = document.createElement(newChild.tagName);
+        oldParent.insertBefore(newEmptyChild, insertionPoint);
+        morphOldNodeTo(newEmptyChild, newChild, ctx);
+        ctx.callbacks.afterNodeAdded(newEmptyChild);
+      } else {
+        const newClonedChild = document.importNode(newChild, true); // clone as to not mutate newParent
+        oldParent.insertBefore(newClonedChild, insertionPoint);
+        ctx.callbacks.afterNodeAdded(newClonedChild);
+      }
     }
+    removeIdsFromConsideration(ctx, newChild);
   }
-  removeIdsFromConsideration(ctx, newChild);
-}
 
   /**
    * @param {Node} oldNode root node to merge content into
@@ -299,19 +299,13 @@ function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
     if (ctx.ignoreActive && oldNode === document.activeElement) {
       // don't morph focused element
     } else if (newContent == null) {
-      if (ctx.callbacks.beforeNodeRemoved(oldNode) === false) return oldNode;
-
-      oldNode.parentNode?.removeChild(oldNode);
-      ctx.callbacks.afterNodeRemoved(oldNode);
+      removeNode(oldNode, ctx);
       return null;
     } else if (!isSoftMatch(oldNode, newContent)) {
-      if (ctx.callbacks.beforeNodeRemoved(oldNode) === false) return oldNode;
-      if (ctx.callbacks.beforeNodeAdded(newContent) === false) return oldNode;
-
-      oldNode.parentNode?.replaceChild(newContent, oldNode);
-      ctx.callbacks.afterNodeAdded(newContent);
-      ctx.callbacks.afterNodeRemoved(oldNode);
-      return newContent;
+      insertOrMorphNode(oldNode.parentElement, newContent, oldNode, ctx);
+      const newNode = oldNode.previousSibling;
+      removeNode(oldNode, ctx);
+      return newNode;
     } else {
       if (ctx.callbacks.beforeNodeMorphed(oldNode, newContent) === false)
         return oldNode;
@@ -394,7 +388,7 @@ function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
 
       // if we are at the end of the exiting parent's children, just append
       if (insertionPoint == null) {
-        insertOrMorphNode(oldParent, newChild, insertionPoint, ctx)
+        insertOrMorphNode(oldParent, newChild, insertionPoint, ctx);
         continue;
       }
 
@@ -461,7 +455,7 @@ function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
       // abandon all hope of morphing, just insert the new child before the insertion point
       // and move on
 
-      insertOrMorphNode(oldParent, newChild, insertionPoint, ctx)
+      insertOrMorphNode(oldParent, newChild, insertionPoint, ctx);
     }
 
     // remove any remaining old nodes that didn't match up with new content
@@ -745,10 +739,7 @@ function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
     // remove all removed elements, after we have appended the new elements to avoid
     // additional network requests for things like style sheets
     for (const removedElement of removed) {
-      if (ctx.callbacks.beforeNodeRemoved(removedElement) !== false) {
-        currentHead.removeChild(removedElement);
-        ctx.callbacks.afterNodeRemoved(removedElement);
-      }
+      removeNode(removedElement, ctx);
     }
 
     ctx.head.afterHeadMorphed(currentHead, {
@@ -1143,7 +1134,7 @@ function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
     let node = stack.pop();
     while (node !== undefined) {
       added.push(node); // push added preceding siblings on in order and insert
-      insertOrMorphNode(morphedNode.parentElement, node, morphedNode, ctx)
+      insertOrMorphNode(morphedNode.parentElement, node, morphedNode, ctx);
       node = stack.pop();
     }
     added.push(morphedNode);
@@ -1154,7 +1145,7 @@ function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
     }
     while (stack.length > 0) {
       const node = /** @type {Node} */ (stack.pop());
-      insertOrMorphNode(morphedNode.parentElement, node, morphedNode.nextSibling, ctx)
+      insertOrMorphNode(morphedNode.parentElement, node, morphedNode.nextSibling, ctx);
     }
     return added;
   }
@@ -1425,7 +1416,7 @@ function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
     let matchIdSet = new Set();
     for (const newNode of elementsWithIds(newContent)) {
       const id = newNode.id;
-      const oldTagName = oldIdMap.get(id)
+      const oldTagName = oldIdMap.get(id);
       // if already matched skip id as duplicate but also skip if tag types mismatch because it could match later
       if (matchIdSet.has(id) || (oldTagName && oldTagName !== newNode.tagName)) {
         dupSet.add(id);

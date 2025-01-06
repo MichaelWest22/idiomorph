@@ -528,6 +528,45 @@ describe("Two-pass option for retaining more state", function () {
     document.activeElement.outerHTML.should.equal(document.body.outerHTML);
   });
 
+  it("duplicate destination ids on elements aborts twoPass matching to avoid invalid morph state", function () {
+    // twoPass can try and reuse existing id's where possible and has to exclude matching on duplicate ids
+    // to avoid losing content
+    getWorkArea().append(
+      make(`
+            <div>
+              <div id="left">
+                <input type="text" id="first" value="first1">
+              </div>
+              <div id="right">
+                <input type="text" id="second" value="second1">
+              </div>
+            </div>
+        `),
+    );
+    document.getElementById("first").focus();
+
+    let finalSrc = `
+            <div>
+              <div id="left">
+                <input type="text" id="second" value="second1">
+                <input type="text" id="second" value="second2">
+              </div>
+              <div id="right">
+                <input type="text" id="first" value="first1">
+                <input type="text" id="first" value="first2">
+              </div>
+            </div>
+        `;
+    Idiomorph.morph(getWorkArea(), finalSrc, {
+      morphStyle: "innerHTML",
+      twoPass: true,
+    });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    // should have lost active element focus because duplicate ids can not be processed properly
+    document.activeElement.outerHTML.should.equal(document.body.outerHTML);
+  });
+
   it("preserves all non-attribute element state with two-pass option and outerHTML morphStyle when morphing to two top level nodes", function () {
   // when using outerHTML you can replace one node with two nodes with the state preserving items split and it will just
   // pick one best node to morph and just insert the other nodes so need to check these also retain state
@@ -603,6 +642,23 @@ describe("Two-pass option for retaining more state", function () {
                <span><input type="checkbox" id="first"></span>
              </div>
          `;
+     Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML", twoPass: true });
+ 
+     getWorkArea().innerHTML.should.equal(finalSrc);
+     const states = Array.from(getWorkArea().querySelectorAll("input")).map(
+       (e) => e.indeterminate,
+     );
+     states.should.eql([true]);
+   });
+
+   it("preserves all non-attribute element state with two-pass option when wrapping element changes tag at top level", function () {
+    // just changing the type from div to span of the top wrapping item with outerHTML morph will cause morphOldNodeTo function
+    // to morph the two nodes that don't softmatch that also needs to handle preserving state
+    const div = make(`<div><input type="checkbox" id="first"></div>`);
+     getWorkArea().append(div);
+     document.getElementById("first").indeterminate = true;
+ 
+     let finalSrc = `<span><input type="checkbox" id="first"></span>`;
      Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML", twoPass: true });
  
      getWorkArea().innerHTML.should.equal(finalSrc);
