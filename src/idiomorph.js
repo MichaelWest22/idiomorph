@@ -1438,15 +1438,6 @@ function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
     return matchIdSet;
   }
 
-  /**
-   * Generates a string in the format "TAGNAME#id" for a given DOM element.
-   *
-   * @param {Element} element - The DOM element to generate the string for.
-   * @returns {string} The generated string in the format "TAGNAME#id".
-   */
-  function toIdTagName(element) {
-    return element.tagName + "#" + element.id;
-  }
   //=============================================================================
   // This is what ends up becoming the Idiomorph global object
   //=============================================================================
