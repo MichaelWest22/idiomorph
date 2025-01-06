@@ -528,9 +528,9 @@ describe("Two-pass option for retaining more state", function () {
     document.activeElement.outerHTML.should.equal(document.body.outerHTML);
   });
 
-  it.only("show outerHTML does not handle prserving state with singlePass and multiple top level nodes", function () {
+  it("preserves all non-attribute element state with two-pass option and outerHTML morphStyle when morphing to two top level nodes", function () {
   // when using outerHTML you can replace one node with two nodes with the state preserving items split and it will just
-  // pick one node to morph and just replace the other one without preserving any state.
+  // pick one best node to morph and just insert the other nodes so need to check these also retain state
    const div = make(`
             <div>
               <input type="checkbox" id="first">
@@ -556,9 +556,40 @@ describe("Two-pass option for retaining more state", function () {
     states.should.eql([true, true]);
   });
 
-  it.only("show singlePass does not handle preserving state when softmatch is not possible at higher level", function () {
+  it("preserves all non-attribute element state with two-pass option and outerHTML morphStyle when morphing to two top level nodes with nesting", function () {
+  // when using outerHTML you can replace one node with two nodes with the state preserving items split and it will just
+  // pick one best node to morph and just insert the other nodes so need to check these also retain state
+   const div = make(`
+            <div>
+              <input type="checkbox" id="first">
+              <input type="checkbox" id="second">
+            </div>
+        `);
+    getWorkArea().append(div);
+    document.getElementById("first").indeterminate = true;
+    document.getElementById("second").indeterminate = true;
+
+    let finalSrc = `
+            <div>
+              <input type="checkbox" id="second">
+            </div>
+            <div>
+              <input type="checkbox" id="first">
+            </div>
+        `;
+    Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML", twoPass: true });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    const states = Array.from(getWorkArea().querySelectorAll("input")).map(
+      (e) => e.indeterminate,
+    );
+    states.should.eql([true, true]);
+  });
+
+
+  it("preserves all non-attribute element state with two-pass option when wrapping element changes tag", function () {
     // just changing the type from div to span of the wrapper causes softmatch to fail so it abandons all hope
-    // of morphing and clones the node before using insertBefore and loses child preserved id's
+    // of morphing and just inserts the node so we need to check this still handles preserving state here.
     const div = make(`
              <div>
                <div><input type="checkbox" id="first"></div>

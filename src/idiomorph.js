@@ -226,6 +226,7 @@ var Idiomorph = (function () {
             previousSibling,
             morphedNode,
             nextSibling,
+            ctx,
           );
           ctx.pantry.remove();
           return elements;
@@ -255,6 +256,38 @@ var Idiomorph = (function () {
       possibleActiveElement !== document.body
     );
   }
+
+/**
+   * @param {Element | null} oldParent 
+   * @param {Node} newChild new content to merge
+   * @param {Node | null} insertionPoint insertion point to place content before
+   * @param {MorphContext} ctx the merge context
+   */
+function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
+  if (oldParent == null) return
+  if (ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
+    const movedChild = moveBeforeById(
+      oldParent,
+      /** @type {Element} */ (newChild).id,
+      insertionPoint,
+      ctx,
+    );
+    morphOldNodeTo(movedChild, newChild, ctx);
+  } else {
+    if (ctx.callbacks.beforeNodeAdded(newChild) === false) return;
+    if (hasPersistentIdNodes(ctx,newChild) && newChild instanceof Element) {
+      const newEmptyChild = document.createElement(newChild.tagName)
+      oldParent.insertBefore(newEmptyChild, insertionPoint);
+      morphOldNodeTo(newEmptyChild, newChild, ctx)
+      ctx.callbacks.afterNodeAdded(newEmptyChild);
+    } else {
+      const newClonedChild = document.importNode(newChild, true); // clone as to not mutate newParent
+      oldParent.insertBefore(newClonedChild, insertionPoint);
+      ctx.callbacks.afterNodeAdded(newClonedChild);
+    }
+  }
+  removeIdsFromConsideration(ctx, newChild);
+}
 
   /**
    * @param {Node} oldNode root node to merge content into
@@ -361,20 +394,7 @@ var Idiomorph = (function () {
 
       // if we are at the end of the exiting parent's children, just append
       if (insertionPoint == null) {
-        if (ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
-          const movedChild = moveBeforeById(
-            oldParent,
-            /** @type {Element} */ (newChild).id,
-            null,
-            ctx,
-          );
-          morphOldNodeTo(movedChild, newChild, ctx);
-        } else {
-          if (ctx.callbacks.beforeNodeAdded(newChild) === false) continue;
-          oldParent.appendChild(newChild);
-          ctx.callbacks.afterNodeAdded(newChild);
-        }
-        removeIdsFromConsideration(ctx, newChild);
+        insertOrMorphNode(oldParent, newChild, insertionPoint, ctx)
         continue;
       }
 
@@ -441,27 +461,7 @@ var Idiomorph = (function () {
       // abandon all hope of morphing, just insert the new child before the insertion point
       // and move on
 
-      if (ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
-        const movedChild = moveBeforeById(
-          oldParent,
-          /** @type {Element} */ (newChild).id,
-          insertionPoint,
-          ctx,
-        );
-        morphOldNodeTo(movedChild, newChild, ctx);
-      } else {
-        if (ctx.callbacks.beforeNodeAdded(newChild) === false) continue;
-        if (ctx.config.twoPass) {
-          // maybe this should be a bugfix and in both modes?
-          const newClonedChild = document.importNode(newChild, true); // clone as to not mutate newParent
-          oldParent.insertBefore(newClonedChild, insertionPoint);
-          ctx.callbacks.afterNodeAdded(newClonedChild);
-        } else {
-          oldParent.insertBefore(newChild, insertionPoint);
-          ctx.callbacks.afterNodeAdded(newChild);
-        }
-      }
-      removeIdsFromConsideration(ctx, newChild);
+      insertOrMorphNode(oldParent, newChild, insertionPoint, ctx)
     }
 
     // remove any remaining old nodes that didn't match up with new content
@@ -1122,9 +1122,10 @@ var Idiomorph = (function () {
    * @param {Node | null} previousSibling
    * @param {Node} morphedNode
    * @param {Node | null} nextSibling
+   * @param {MorphContext} ctx
    * @returns {Node[]}
    */
-  function insertSiblings(previousSibling, morphedNode, nextSibling) {
+  function insertSiblings(previousSibling, morphedNode, nextSibling, ctx) {
     /**
      * @type {Node[]}
      */
@@ -1142,7 +1143,7 @@ var Idiomorph = (function () {
     let node = stack.pop();
     while (node !== undefined) {
       added.push(node); // push added preceding siblings on in order and insert
-      morphedNode.parentElement?.insertBefore(node, morphedNode);
+      insertOrMorphNode(morphedNode.parentElement, node, morphedNode, ctx)
       node = stack.pop();
     }
     added.push(morphedNode);
@@ -1153,7 +1154,7 @@ var Idiomorph = (function () {
     }
     while (stack.length > 0) {
       const node = /** @type {Node} */ (stack.pop());
-      morphedNode.parentElement?.insertBefore(node, morphedNode.nextSibling);
+      insertOrMorphNode(morphedNode.parentElement, node, morphedNode.nextSibling, ctx)
     }
     return added;
   }
