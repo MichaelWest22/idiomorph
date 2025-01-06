@@ -336,6 +336,28 @@ var Idiomorph = (function () {
   }
 
   /**
+   * @param {Node} oldNode the node to be morphed
+   * @param {Node} newChild the new content 
+   * @param {Node} insertionPoint the current point in the DOM we are morphing content at
+   * @param {MorphContext} ctx the merge context
+   * @returns {Node|null} returns the new insertion point after the merged node
+   */
+  function morphChild(oldNode, newChild, insertionPoint, ctx) {
+    // if the node to morph is not at the insertion point then we need to move it here by moving or removing nodes
+    if (oldNode !== insertionPoint) {
+      if (ctx.config.twoPass) {
+        // @ts-ignore we know the Node has a valid parent
+        moveBefore(oldNode.parentElement, oldNode, insertionPoint);
+      } else {
+        removeNodesBetween(insertionPoint, oldNode, ctx);
+      }
+    }
+    morphOldNodeTo(oldNode, newChild, ctx);
+    removeIdsFromConsideration(ctx, newChild);
+    return oldNode.nextSibling;
+  }
+
+  /**
    * This is the core algorithm for matching up children.  The idea is to use id sets to try to match up
    * nodes as faithfully as possible.  We greedily match, which allows us to keep the algorithm fast, but
    * by using id sets, we are able to better match up with content deeper in the DOM.
@@ -346,6 +368,7 @@ var Idiomorph = (function () {
    * - if the new content has an id set match with the current insertion point, morph
    * - search for an id set match
    * - if id set match found, morph
+   * - if the new content is a soft match with the current insertion point, morph
    * - otherwise search for a "soft" match
    * - if a soft match is found, morph
    * - otherwise, prepend the new node before the current insertion point
@@ -394,61 +417,31 @@ var Idiomorph = (function () {
 
       // if the current node has an id set match then morph
       if (isIdSetMatch(newChild, insertionPoint, ctx)) {
-        morphOldNodeTo(insertionPoint, newChild, ctx);
-        insertionPoint = insertionPoint.nextSibling;
-        removeIdsFromConsideration(ctx, newChild);
+        insertionPoint = morphChild(insertionPoint, newChild, insertionPoint, ctx)
         continue;
       }
 
       // otherwise search forward in the existing old children for an id set match
-      let idSetMatch = findIdSetMatch(
-        newParent,
-        oldParent,
-        newChild,
-        insertionPoint,
-        ctx,
-      );
+      let idSetMatch = findIdSetMatch(newParent, oldParent, newChild, insertionPoint, ctx);
 
       // if we found a potential match, remove the nodes until that point and morph
       if (idSetMatch) {
-        if (ctx.config.twoPass) {
-          moveBefore(oldParent, idSetMatch, insertionPoint);
-        } else {
-          insertionPoint = removeNodesBetween(insertionPoint, idSetMatch, ctx);
-        }
-        morphOldNodeTo(idSetMatch, newChild, ctx);
-        removeIdsFromConsideration(ctx, newChild);
+        insertionPoint = morphChild(idSetMatch, newChild, insertionPoint, ctx)
         continue;
       }
 
-      if (
-        ctx.config.twoPass && // maybe we can run this in default mode too?
-        isSoftMatch(insertionPoint, newChild)
-      ) {
-        morphOldNodeTo(insertionPoint, newChild, ctx);
-        insertionPoint = insertionPoint.nextSibling;
-        removeIdsFromConsideration(ctx, newChild);
+      // if the current point is already a soft match morph
+      if (isSoftMatch(insertionPoint, newChild)) {
+        insertionPoint = morphChild(insertionPoint, newChild, insertionPoint, ctx);
         continue;
       }
 
-      // no id set match found, so scan forward for a soft match for the current node
-      let softMatch = findSoftMatch(
-        newParent,
-        oldParent,
-        newChild,
-        insertionPoint,
-        ctx,
-      );
+      // no id set or soft match found, so scan forward for a soft match for the current node
+      let softMatch = findSoftMatch(newParent, oldParent, newChild, insertionPoint, ctx);
 
-      // if we found a soft match for the current node, morph
+      // if we found a soft match, remove nodes until that point and morph
       if (softMatch) {
-        if (ctx.config.twoPass) {
-          moveBefore(oldParent, softMatch, insertionPoint);
-        } else {
-          insertionPoint = removeNodesBetween(insertionPoint, softMatch, ctx);
-        }
-        morphOldNodeTo(softMatch, newChild, ctx);
-        removeIdsFromConsideration(ctx, newChild);
+        insertionPoint = morphChild(softMatch, newChild, insertionPoint, ctx);
         continue;
       }
 
