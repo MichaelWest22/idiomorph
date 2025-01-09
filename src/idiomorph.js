@@ -793,6 +793,7 @@ var Idiomorph = (function () {
    */
   function createMorphContext(oldNode, newContent, config) {
     const mergedConfig = mergeDefaults(config);
+    const persistentIds = createPersistentIds(oldNode, newContent);
     return {
       target: oldNode,
       newContent: newContent,
@@ -800,10 +801,10 @@ var Idiomorph = (function () {
       morphStyle: mergedConfig.morphStyle,
       ignoreActive: mergedConfig.ignoreActive,
       ignoreActiveValue: mergedConfig.ignoreActiveValue,
-      idMap: createIdMap(oldNode, newContent),
+      idMap: createIdMap(oldNode, newContent, persistentIds),
       deadIds: new Set(),
       persistentIds: mergedConfig.twoPass
-        ? createPersistentIds(oldNode, newContent)
+        ? persistentIds
         : new Set(),
       pantry: mergedConfig.twoPass
         ? createPantry()
@@ -1345,25 +1346,28 @@ var Idiomorph = (function () {
    *
    * @param {Element} node
    * @param {Map<Node, Set<string>>} idMap
+   * @param {Set<string>} persistentIds
    */
-  function populateIdMapForNode(node, idMap) {
+  function populateIdMapForNode(node, idMap, persistentIds) {
     let nodeParent = node.parentElement;
     for (const elt of elementsWithIds(node)) {
-      /**
-       * @type {Element|null}
-       */
-      let current = elt;
-      // walk up the parent hierarchy of that element, adding the id
-      // of element to the parent's id set
-      while (current !== nodeParent && current != null) {
-        let idSet = idMap.get(current);
-        // if the id set doesn't exist, create it and insert it in the  map
-        if (idSet == null) {
-          idSet = new Set();
-          idMap.set(current, idSet);
+      if (persistentIds.has(elt.id)) {
+        /**
+         * @type {Element|null}
+         */
+        let current = elt;
+        // walk up the parent hierarchy of that element, adding the id
+        // of element to the parent's id set
+        while (current !== nodeParent && current != null) {
+          let idSet = idMap.get(current);
+          // if the id set doesn't exist, create it and insert it in the  map
+          if (idSet == null) {
+            idSet = new Set();
+            idMap.set(current, idSet);
+          }
+          idSet.add(elt.id);
+          current = current.parentElement;
         }
-        idSet.add(elt.id);
-        current = current.parentElement;
       }
     }
   }
@@ -1376,16 +1380,17 @@ var Idiomorph = (function () {
    *
    * @param {Element} oldContent  the old content that will be morphed
    * @param {Element} newContent  the new content to morph to
+   * @param {Set<string>} persistentIds
    * @returns {Map<Node, Set<string>>} a map of nodes to id sets for the
    */
-  function createIdMap(oldContent, newContent) {
+  function createIdMap(oldContent, newContent, persistentIds) {
     /**
      *
      * @type {Map<Node, Set<string>>}
      */
     let idMap = new Map();
-    populateIdMapForNode(oldContent, idMap);
-    populateIdMapForNode(newContent, idMap);
+    populateIdMapForNode(oldContent, idMap, persistentIds);
+    populateIdMapForNode(newContent, idMap, persistentIds);
     return idMap;
   }
 
