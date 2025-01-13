@@ -188,16 +188,18 @@ describe("algorithm", function () {
   it("preserves focus state when previous element is replaced", function () {
     getWorkArea().innerHTML = `
             <div>
-              <a></a>
+              <a id="a"></a>
               <input type="text" id="focus">
+              <b id="b"></b>
             </div>
         `;
     document.getElementById("focus").focus();
 
     let finalSrc = `
             <div>
-              <b></b>
+              <b id="b"></b>
               <input type="text" id="focus">
+              <a id="a"></a>
             </div>
         `;
     Idiomorph.morph(getWorkArea(), finalSrc, {
