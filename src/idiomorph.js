@@ -416,7 +416,7 @@ var Idiomorph = (function () {
             ctx,
           );
           if (idSetMatch) {
-            //insertionPoint = removeNodesBetween(insertionPoint, idSetMatch, ctx);
+            insertionPoint = removeNodesBetween(insertionPoint, idSetMatch, ctx);
             insertionPoint = morphChild(
               idSetMatch,
               newChild,
@@ -445,7 +445,7 @@ var Idiomorph = (function () {
             ctx,
           );
           if (softMatch) {
-            //insertionPoint = removeNodesBetween(insertionPoint, softMatch, ctx);
+            insertionPoint = removeNodesBetween(insertionPoint, softMatch, ctx);
             insertionPoint = morphChild(softMatch, newChild, insertionPoint, ctx);
             continue;
           }
@@ -1126,12 +1126,14 @@ var Idiomorph = (function () {
    */
   function removeNodesBetween(startInclusive, endExclusive, ctx) {
     /** @type {Node | null} */ let cursor = startInclusive;
-    while (cursor && cursor !== endExclusive) { // } && !hasPersistentIdNodes(ctx, cursor)) {
+    while (cursor && cursor !== endExclusive && !hasPersistentIdNodes(ctx, cursor)) {
       let tempNode = /** @type {Node} */ (cursor);
       // TODO: Prefer assigning to a new variable here or expand the type of startInclusive
       //  to be Node | null
       cursor = tempNode.nextSibling;
-      removeNode(tempNode, ctx);
+      if(!removeNode(tempNode, ctx)) {
+        return tempNode;
+      }
     }
     //removeIdsFromConsideration(ctx, endExclusive);
     return cursor;
@@ -1141,16 +1143,18 @@ var Idiomorph = (function () {
    *
    * @param {Node} node
    * @param {MorphContext} ctx
+   * @return {boolean} return true if node was removed
    */
   function removeNode(node, ctx) {
     // skip remove callbacks when we're going to be restoring this from the pantry later
     if (hasPersistentIdNodes(ctx, node) && node instanceof Element) {
       moveBefore(ctx.pantry, node, null);
     } else {
-      if (ctx.callbacks.beforeNodeRemoved(node) === false) return;
+      if (ctx.callbacks.beforeNodeRemoved(node) === false) return false;
       node.parentNode?.removeChild(node);
       ctx.callbacks.afterNodeRemoved(node);
     }
+    return true;
   }
 
   /**

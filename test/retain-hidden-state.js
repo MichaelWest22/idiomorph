@@ -717,8 +717,9 @@ describe("algorithm", function () {
   it("check moveBefore function falls back to insertBefore if moveBefore fails", function () {
     getWorkArea().innerHTML = `
             <div>
-              <a></a>
+              <a id="a"></a>
               <input type="text" id="focus">
+              <b id="b"></b>
             </div>
         `;
     document.getElementById("focus").focus();
@@ -727,8 +728,9 @@ describe("algorithm", function () {
 
     let finalSrc = `
             <div>
-              <b></b>
+              <b id="b"></b>
               <input type="text" id="focus">
+              <a id="a"></a>
             </div>
         `;
     Idiomorph.morph(getWorkArea(), finalSrc, {
@@ -742,8 +744,9 @@ describe("algorithm", function () {
   it("check moveBefore function falls back to insertBefore if moveBefore is missing", function () {
     getWorkArea().innerHTML = `
             <div>
-              <a></a>
+              <a id="a"></a>
               <input type="text" id="focus">
+              <b id="b"></b>
             </div>
         `;
     document.getElementById("focus").focus();
@@ -752,8 +755,9 @@ describe("algorithm", function () {
 
     let finalSrc = `
             <div>
-              <b></b>
+              <b id="b"></b>
               <input type="text" id="focus">
+              <a id="a"></a>
             </div>
         `;
     Idiomorph.morph(getWorkArea(), finalSrc, {
@@ -763,4 +767,41 @@ describe("algorithm", function () {
     getWorkArea().innerHTML.should.equal(finalSrc);
     document.activeElement.outerHTML.should.equal(document.body.outerHTML);
   });
+
+  /*it("findIdSetMatch rejects morphing node that would lose more IDsxxxx", function () {
+    const div = make(`
+            <div>
+              <input type="text" id="first">
+              <input type="text" id="second">
+              <input type="text" id="third">
+            </div>
+        `);
+    getWorkArea().append(div);
+    document.getElementById("third").focus();
+
+    let finalSrc = `
+            <div>
+              <input type="text" id="first">
+            </div>
+            <div>  
+              <input type="text" id="second">
+              <input type="text" id="third">
+            </div>
+        `;
+    Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML" });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    if (document.body.moveBefore) {
+      // moveBefore would prevent the node being discarded and losing state so we can't detect easily if findIdSetMatch rejected the morphing
+      document.activeElement.outerHTML.should.equal(
+        document.getElementById("third").outerHTML,
+      );
+    } else {
+      // but testing with no moveBefore we can test it
+      // third paragrah should have been discarded because it was moved in front of two other paragraphs with ID's
+      // it should detect that removing the first two nodes with ID's to preserve just one ID is not worth it
+      document.activeElement.outerHTML.should.equal(document.body.outerHTML);
+    }
+  });*/
+
 });
