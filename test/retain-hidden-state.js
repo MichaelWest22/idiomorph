@@ -861,4 +861,52 @@ describe("algorithm", function () {
     }
   });
 
+  it("show bestMatch routine can match the best old node for morphing 2", function () {
+    const div = make(`
+            <div>
+              <input type="text" id="focus">
+            </div>
+        `.trim());
+    getWorkArea().append(div);
+    document.getElementById("focus").focus();
+
+    let finalSrc = `
+            <div></div>
+            <div>
+              <input type="text" id="focus">  
+            </div>
+        `.trim();
+    Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML" });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    // the bestMatch code should find that the second destination div is a better id match than the first empty div and retain focus here
+    document.activeElement.outerHTML.should.equal(document.getElementById("focus").outerHTML);
+  });
+
+  it("show bestMatch routine can match the best old node for morphing with deeper content", function () {
+    // the new routine also handles bestMatch checking on inner children scans while before it was only run on the top node
+    const div = make(`
+            <div>
+              <div>
+                <input type="text" id="focus">
+              </div>
+            </div>
+        `.trim());
+    getWorkArea().append(div);
+    document.getElementById("focus").focus();
+
+    let finalSrc = `
+            <div>
+              <div></div>
+              <div>
+                <input type="text" id="focus">  
+              </div>
+            </div>
+        `.trim();
+    Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML" });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    // the bestMatch code should find that the second destination div is a better id match than the first empty div and retain focus here
+    document.activeElement.outerHTML.should.equal(document.getElementById("focus").outerHTML);
+  });
 });
