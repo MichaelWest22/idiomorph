@@ -892,6 +892,24 @@ var Idiomorph = (function () {
   }
 
   /**
+   *
+   * @param {Node} startInclusive
+   * @param {Node} endExclusive
+   * @param {MorphContext} ctx
+   * @returns {Node | null}
+   */
+  function removeNodesBetween(startInclusive, endExclusive, ctx) {
+    /** @type {Node | null} */ let cursor = startInclusive;
+    // remove nodes until it the end point or we find the active node tree that may have focus
+    while (cursor && cursor !== endExclusive && !cursor.contains(document.activeElement)) {
+      let tempNode = /** @type {Node} */ (cursor);
+      cursor = cursor.nextSibling;
+      removeNode(tempNode, ctx);
+    }
+    return cursor;
+  }
+
+  /**
    *  Scans forward from the insertionPoint in the old parent looking for a potential id match
    *  for the newChild.  We stop if we find a potential id match for the new child OR
    *  if the number of potential id matches we are discarding is greater than the
@@ -944,24 +962,6 @@ var Idiomorph = (function () {
       }
     }
     return null;
-  }
-
-  /**
-   *
-   * @param {Node} startInclusive
-   * @param {Node} endExclusive
-   * @param {MorphContext} ctx
-   * @returns {Node | null}
-   */
-  function removeNodesBetween(startInclusive, endExclusive, ctx) {
-    /** @type {Node | null} */ let cursor = startInclusive;
-    // remove nodes until it the end point or we find the active node tree that may have focus
-    while (cursor && cursor !== endExclusive && !cursor.contains(document.activeElement)) {
-      let tempNode = /** @type {Node} */ (cursor);
-      cursor = cursor.nextSibling;
-      removeNode(tempNode, ctx);
-    }
-    return cursor;
   }
 
   /**
