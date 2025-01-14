@@ -315,15 +315,19 @@ var Idiomorph = (function () {
   /**
    * @param {Node} oldNode the node to be morphed
    * @param {Node} newChild the new content
-   * @param {Node|null} insertionPoint the current point in the DOM we are morphing content at
+   * @param {Node} insertionPoint the current point in the DOM we are morphing content at
    * @param {MorphContext} ctx the merge context
    * @returns {Node|null} returns the new insertion point after the merged node
    */
   function morphChild(oldNode, newChild, insertionPoint, ctx) {
-    // if the node to morph is not at the insertion point then we need to move it here by moving or removing nodes
+    // if the node to morph is not at the insertion point then we need to move it here by moving or removing inbetween nodes
     if (oldNode !== insertionPoint) {
-      // @ts-ignore we know the Node has a valid parent
-      moveBefore(oldNode.parentElement, oldNode, insertionPoint);
+      // first try and remove as many nodes as possible before oldNode until prevented by hook
+      const newInsertionPoint = removeNodesBetween(insertionPoint, oldNode, ctx);
+      if (oldNode !== newInsertionPoint) {
+        // @ts-ignore we know the Node has a valid parent
+        moveBefore(oldNode.parentNode, oldNode, newInsertionPoint);
+      }
     }
     morphOldNodeTo(oldNode, newChild, ctx);
     return oldNode.nextSibling;
@@ -416,7 +420,6 @@ var Idiomorph = (function () {
             ctx,
           );
           if (idSetMatch) {
-            insertionPoint = removeNodesBetween(insertionPoint, idSetMatch, ctx);
             insertionPoint = morphChild(
               idSetMatch,
               newChild,
@@ -445,7 +448,6 @@ var Idiomorph = (function () {
             ctx,
           );
           if (softMatch) {
-            insertionPoint = removeNodesBetween(insertionPoint, softMatch, ctx);
             insertionPoint = morphChild(softMatch, newChild, insertionPoint, ctx);
             continue;
           }
@@ -1126,16 +1128,16 @@ var Idiomorph = (function () {
    */
   function removeNodesBetween(startInclusive, endExclusive, ctx) {
     /** @type {Node | null} */ let cursor = startInclusive;
-    while (cursor && cursor !== endExclusive && !hasPersistentIdNodes(ctx, cursor)) {
+    while (cursor && cursor !== endExclusive && cursor != document.activeElement) {
       let tempNode = /** @type {Node} */ (cursor);
       // TODO: Prefer assigning to a new variable here or expand the type of startInclusive
       //  to be Node | null
       cursor = tempNode.nextSibling;
       if(!removeNode(tempNode, ctx)) {
+        // node removal cancled by hook so stop removing at this point
         return tempNode;
       }
     }
-    //removeIdsFromConsideration(ctx, endExclusive);
     return cursor;
   }
 

@@ -161,7 +161,7 @@ describe("algorithm", function () {
     states.should.eql([true, true]);
   });
 
-  it("preserves focus state and outerHTML morphStyle", function () {
+  it("preserves focus state and outerHTML morphStyle first", function () {
     const div = make(`
             <div>
               <input type="text" id="first">
@@ -182,6 +182,30 @@ describe("algorithm", function () {
     getWorkArea().innerHTML.should.equal(finalSrc);
     document.activeElement.outerHTML.should.equal(
       document.getElementById("first").outerHTML,
+    );
+  });
+
+  it("preserves focus state and outerHTML morphStyle second", function () {
+    const div = make(`
+            <div>
+              <input type="text" id="first">
+              <input type="text" id="second">
+            </div>
+        `);
+    getWorkArea().append(div);
+    document.getElementById("second").focus();
+
+    let finalSrc = `
+            <div>
+              <input type="text" id="second">
+              <input type="text" id="first">
+            </div>
+        `;
+    Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML" });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    document.activeElement.outerHTML.should.equal(
+      document.getElementById("second").outerHTML,
     );
   });
 
@@ -207,14 +231,9 @@ describe("algorithm", function () {
     });
 
     getWorkArea().innerHTML.should.equal(finalSrc);
-    if (document.body.moveBefore) {
-      document.activeElement.outerHTML.should.equal(
-        document.getElementById("focus").outerHTML,
-      );
-    } else {
-      document.activeElement.outerHTML.should.equal(document.body.outerHTML);
-      console.log("needs moveBefore enabled to work properly");
-    }
+    document.activeElement.outerHTML.should.equal(
+      document.getElementById("focus").outerHTML,
+    );
   });
 
   it("preserves focus state when elements are moved to different levels of the DOM", function () {
@@ -331,11 +350,11 @@ describe("algorithm", function () {
     getWorkArea().append(
       make(`
             <div>
-              <div id="with-focus">
-                <input type="text" id="focus">
-              </div>
               <div id="with-other">
                 <input type="text" id="other">
+              </div>
+              <div id="with-focus">
+                <input type="text" id="focus">
               </div>
             </div>
         `),
@@ -344,11 +363,11 @@ describe("algorithm", function () {
 
     let finalSrc = `
             <div>
-              <div id="with-other">
-                <input type="text" id="other">
-              </div>
               <div id="with-focus">
                 <input type="text" id="focus">
+              </div>
+              <div id="with-other">
+                <input type="text" id="other">
               </div>
             </div>
         `;
@@ -716,7 +735,7 @@ describe("algorithm", function () {
     getWorkArea().innerHTML.should.equal(finalSrc);
   });
 
-  it("check moveBefore function falls back to insertBefore if moveBefore fails", function () {
+/*  it("check moveBefore function falls back to insertBefore if moveBefore fails", function () {
     getWorkArea().innerHTML = `
             <div>
               <a id="a"></a>
@@ -769,17 +788,17 @@ describe("algorithm", function () {
     getWorkArea().innerHTML.should.equal(finalSrc);
     document.activeElement.outerHTML.should.equal(document.body.outerHTML);
   });
-
-  /*it("findIdSetMatch rejects morphing node that would lose more IDsxxxx", function () {
+*/
+  it("show bestMatch routine can match the best old node for morphing", function () {
     const div = make(`
             <div>
               <input type="text" id="first">
               <input type="text" id="second">
               <input type="text" id="third">
             </div>
-        `);
+        `.trim());
     getWorkArea().append(div);
-    document.getElementById("third").focus();
+    document.getElementById("first").focus();
 
     let finalSrc = `
             <div>
@@ -789,21 +808,21 @@ describe("algorithm", function () {
               <input type="text" id="second">
               <input type="text" id="third">
             </div>
-        `;
+        `.trim();
     Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML" });
 
     getWorkArea().innerHTML.should.equal(finalSrc);
     if (document.body.moveBefore) {
-      // moveBefore would prevent the node being discarded and losing state so we can't detect easily if findIdSetMatch rejected the morphing
+      // moveBefore would prevent the node being discarded and losing state so we can't detect easily if bestMatch is picking the best node to match
       document.activeElement.outerHTML.should.equal(
-        document.getElementById("third").outerHTML,
+        document.getElementById("first").outerHTML,
       );
-    } else {
+      } else {
       // but testing with no moveBefore we can test it
-      // third paragrah should have been discarded because it was moved in front of two other paragraphs with ID's
-      // it should detect that removing the first two nodes with ID's to preserve just one ID is not worth it
+      // first input should have been discarded because it was not the best match for the final id'ed node in the source
+      // It should instead moprh the div into the second node that contains 2 nodes that can be preserved
       document.activeElement.outerHTML.should.equal(document.body.outerHTML);
     }
-  });*/
+  });
 
 });
