@@ -248,7 +248,7 @@ describe("algorithm", function () {
         `),
     );
     document.getElementById("second").focus();
-
+    
     let finalSrc = `
             <div>
               <input type="text" id="first">
@@ -771,23 +771,23 @@ describe("algorithm", function () {
     getWorkArea().innerHTML.should.equal(finalSrc);
   });
 
-/*  it("check moveBefore function falls back to insertBefore if moveBefore fails", function () {
-    getWorkArea().innerHTML = `
+  it("check moveBefore function fails back to insertBefore if moveBefore is missing", function () {
+    getWorkArea().append(
+      make(`
             <div>
-              <a id="a"></a>
-              <input type="text" id="focus">
-              <b id="b"></b>
+              <input type="checkbox" id="first">
+              <input type="checkbox" id="second">
             </div>
-        `;
-    document.getElementById("focus").focus();
-    // break the moveBefore function so it fails back to insertBefore and focus is not preserved
-    document.getElementById("focus").parentNode.moveBefore = true;
+        `),
+    );
+    // disable moveBefore function to force it to use insertBefore
+    document.getElementById("first").parentNode.moveBefore = undefined;
+    document.getElementById("second").parentNode.moveBefore = undefined;
 
     let finalSrc = `
             <div>
-              <b id="b"></b>
-              <input type="text" id="focus">
-              <a id="a"></a>
+              <input type="checkbox" id="second">
+              <input type="checkbox" id="first">
             </div>
         `;
     Idiomorph.morph(getWorkArea(), finalSrc, {
@@ -795,36 +795,8 @@ describe("algorithm", function () {
     });
 
     getWorkArea().innerHTML.should.equal(finalSrc);
-    document.activeElement.outerHTML.should.equal(document.body.outerHTML);
   });
 
-  it("check moveBefore function falls back to insertBefore if moveBefore is missing", function () {
-    getWorkArea().innerHTML = `
-            <div>
-              <a id="a"></a>
-              <input type="text" id="focus">
-              <b id="b"></b>
-            </div>
-        `;
-    document.getElementById("focus").focus();
-    // remove the moveBefore function so it fails back to insertBefore and focus is not preserved
-    document.getElementById("focus").parentNode.moveBefore = undefined;
-
-    let finalSrc = `
-            <div>
-              <b id="b"></b>
-              <input type="text" id="focus">
-              <a id="a"></a>
-            </div>
-        `;
-    Idiomorph.morph(getWorkArea(), finalSrc, {
-      morphStyle: "innerHTML",
-    });
-
-    getWorkArea().innerHTML.should.equal(finalSrc);
-    document.activeElement.outerHTML.should.equal(document.body.outerHTML);
-  });
-*/
   it("show bestMatch routine can match the best old node for morphing", function () {
     const div = make(`
             <div>
@@ -835,6 +807,9 @@ describe("algorithm", function () {
         `.trim());
     getWorkArea().append(div);
     document.getElementById("first").focus();
+    // disable moveBefore to force it to follow bestMatch routine every time
+    document.getElementById("first").parentNode.moveBefore = undefined;
+    document.getElementById("first").parentNode.parentNode.moveBefore = undefined;
 
     let finalSrc = `
             <div>
@@ -861,7 +836,7 @@ describe("algorithm", function () {
     }
   });
 
-  it("show bestMatch routine can match the best old node for morphing 2", function () {
+  it("show bestMatch routine can match the best old node for morphing and adding dummy div before", function () {
     const div = make(`
             <div>
               <input type="text" id="focus">
@@ -882,6 +857,40 @@ describe("algorithm", function () {
     // the bestMatch code should find that the second destination div is a better id match than the first empty div and retain focus here
     document.activeElement.outerHTML.should.equal(document.getElementById("focus").outerHTML);
   });
+
+  it("show bestMatch routine disabled losing focus", function () {
+    const div = make(`
+            <div>
+              <input type="text" id="focus">
+            </div>
+        `.trim());
+    getWorkArea().append(div);
+    document.getElementById("focus").focus();
+    // disable best match by tricking it into thinking moveBefore exists which prevents bestMatch function
+    document.getElementById("focus").parentNode.moveBefore = true;
+    document.getElementById("focus").parentNode.parentNode.moveBefore = true;
+
+    let finalSrc = `
+            <div></div>
+            <div>
+              <input type="text" id="focus">  
+            </div>
+        `.trim();
+    Idiomorph.morph(div, finalSrc, { morphStyle: "outerHTML" });
+
+    getWorkArea().innerHTML.should.equal(finalSrc);
+    if (document.body.moveBefore) {
+      // moveBefore would prevent the node being discarded and losing state so we can't detect easily if bestMatch being disabled breaks focus
+      document.activeElement.outerHTML.should.equal(
+        document.getElementById("focus").outerHTML,
+      );
+    } else {
+      // but testing with no moveBefore we can test it
+      // should have not performed bestMatch routine so focus div should have been morphed into an empty div losing focus
+      document.activeElement.outerHTML.should.equal(document.body.outerHTML);
+    }
+  });
+
 
   it("show bestMatch routine can match the best old node for morphing with deeper content", function () {
     // the new routine also handles bestMatch checking on inner children scans while before it was only run on the top node

@@ -149,10 +149,13 @@ var Idiomorph = (function () {
     },
   };
 
+  //=============================================================================
+  //Core Morphing Algorithm - morph, morphNormalizedContent, morphOldNodeTo,
+  //  morphChildren, insertOrMorphNode, morphChild
+  //=============================================================================
+
   /**
-   * =============================================================================
-   * Core Morphing Algorithm - morph, morphNormalizedContent, morphOldNodeTo, morphChildren
-   * =============================================================================
+   * Core idiomorph function for morphing one DOM tree to another
    *
    * @param {Element | Document} oldNode
    * @param {Element | Node | HTMLCollection | Node[] | string | null} newContent
@@ -240,13 +243,15 @@ var Idiomorph = (function () {
   }
 
   /**
-   * @param {Element | null} oldParent
+   * This performs the action of inserting a new node while handling situations where the node contains
+   * elements with persistent ids and possible state info we can still preserve by moving in and then morphing
+   * 
+   * @param {Element} oldParent
    * @param {Node} newChild new content to merge
    * @param {Node | null} insertionPoint insertion point to place content before
    * @param {MorphContext} ctx the merge context
    */
   function insertOrMorphNode(oldParent, newChild, insertionPoint, ctx) {
-    if (oldParent == null) return;
     if (ctx.persistentIds.has(/** @type {Element} */ (newChild).id)) {
       // this node id is somewhere so move it and all its children here and then morph
       const movedChild = moveBeforeById(
@@ -313,6 +318,10 @@ var Idiomorph = (function () {
   }
 
   /**
+   * This wraps the core task of morphing a single new child node with an old node and
+   * handles removing or moving the old content so the old node selected for morphing
+   * is at its final location before we morph it
+   * 
    * @param {Node} oldNode the node to be morphed
    * @param {Node} newChild the new content
    * @param {Node} insertionPoint the current point in the DOM we are morphing content at
@@ -322,7 +331,7 @@ var Idiomorph = (function () {
   function morphChild(oldNode, newChild, insertionPoint, ctx) {
     // if the node to morph is not at the insertion point then we need to move it here by moving or removing inbetween nodes
     if (oldNode !== insertionPoint) {
-      // first try and remove as many nodes as possible before oldNode until prevented by hook
+      // first try and remove as many nodes as possible before oldNode unless it finds active focus
       const newInsertionPoint = removeNodesBetween(insertionPoint, oldNode, ctx);
       if (oldNode !== newInsertionPoint) {
         // @ts-ignore we know the Node has a valid parent
@@ -341,16 +350,18 @@ var Idiomorph = (function () {
    * Basic algorithm is, for each node in the new content:
    *
    * - if we have not reached the end of the old parent:
+   *   - if we are up to the final old node with ids insert nodes till we find the best id match
    *   - if the new content has an id set match with the current insertion point, morph
-   *   - search for an id set match
-   *   - if id set match found, morph
+   *   - search for an id set match in the future old content
+   *   - if a future id set match found, discard old nodes and then morph
    *   - if the new content is a soft match with the current insertion point, morph
-   *   - otherwise search for a "soft" match
-   *   - if a soft match is found, morph
+   *   - otherwise search for a "soft" match in the future old content
+   *   - if a soft match is found, discard old nodes and then morph
    * - otherwise, prepend the new node before the current insertion point
    *
    * The two search algorithms terminate if competing node matches appear to outweigh what can be achieved
-   * with the current node.  See findIdSetMatch() and findSoftMatch() for details.
+   * with the current node.  See findIdSetMatch(), findSoftMatch() and findBestNodeMatch()  for details.
+   * See morphChild() and insertOrMorphNode() for details of morphing the selected nodes.
    *
    * @param {Element} oldParent the old content that we are merging the new content into
    * @param {Element} newParent the parent element of the new content
@@ -368,13 +379,14 @@ var Idiomorph = (function () {
       // @ts-ignore ditto
       newParent = newParent.content;
     }
+    // limit start and end point to a sinle node if processing outerHTML single Node
     let insertionPoint = /** @type {Node | null} */ (onlyNode || oldParent.firstChild);
     let endPoint = /** @type {Node | null} */ (onlyNode?.nextSibling || null);
 
     // Find the last Node with Ids to be used to find final best match
     let bestMatch = /** @type {Node | null} */ (null);
     let lastNodeWithIds = /** @type {Node | null} */ (null);
-    // @ts-ignore check for moveBefore existance
+    // @ts-ignore check for moveBefore as we don't need bestMatch if its available
     if (!oldParent.moveBefore) {
       if (onlyNode) {
         if (hasPersistentIdNodes(ctx, onlyNode)) {
@@ -392,11 +404,10 @@ var Idiomorph = (function () {
     for (const newChild of newParent.childNodes) {
       // once we reach the end of the old parent content skip to the end and insert
       if (insertionPoint != null && insertionPoint != endPoint) {
-        // if last remaining child node with Ids then make sure we morph with the best remaining node if there are multiple
+        // if at last remaining child node with Ids then make sure we morph with the best remaining node if there are multiple
         if (!bestMatch && insertionPoint == lastNodeWithIds) {
           bestMatch = findBestNodeMatch(insertionPoint, newChild, ctx);
         }
-        // if(bestMatch) console.log(bestMatch.outerHTML)
         // if there is no bestMatch or we have found the bestMatch then morph, else skip to end and insert
         if (!bestMatch || bestMatch === newChild) {
           // clear bestMatch if set
@@ -645,9 +656,8 @@ var Idiomorph = (function () {
   }
 
   /**
-   * =============================================================================
    *  The HEAD tag can be handled specially, either w/ a 'merge' or 'append' style
-   * =============================================================================
+   *
    * @param {Element} oldHead
    * @param {Element} newHead
    * @param {MorphContext} ctx
@@ -882,12 +892,11 @@ var Idiomorph = (function () {
   }
 
   /**
-   * =============================================================================
    *  Scans forward from the insertionPoint in the old parent looking for a potential id match
    *  for the newChild.  We stop if we find a potential id match for the new child OR
    *  if the number of potential id matches we are discarding is greater than the
    *  potential id matches for the new child
-   * =============================================================================
+   *
    * @param {Node} newChild
    * @param {Node | null} insertionPoint
    * @param {Node | null} endPoint
@@ -938,12 +947,29 @@ var Idiomorph = (function () {
   }
 
   /**
-   * =============================================================================
+   *
+   * @param {Node} startInclusive
+   * @param {Node} endExclusive
+   * @param {MorphContext} ctx
+   * @returns {Node | null}
+   */
+  function removeNodesBetween(startInclusive, endExclusive, ctx) {
+    /** @type {Node | null} */ let cursor = startInclusive;
+    // remove nodes until it the end point or we find the active node tree that may have focus
+    while (cursor && cursor !== endExclusive && !cursor.contains(document.activeElement)) {
+      let tempNode = /** @type {Node} */ (cursor);
+      cursor = cursor.nextSibling;
+      removeNode(tempNode, ctx);
+    }
+    return cursor;
+  }
+
+  /**
    *  Scans forward from the insertionPoint in the old parent looking for a potential soft match
    *  for the newChild.  We stop if we find a potential soft match for the new child OR
    *  if we find a potential id match in the old parents children OR if we find two
    *  potential soft matches for the next two pieces of new content
-   * =============================================================================
+   *
    * @param {Node} newChild
    * @param {Node | null} insertionPoint
    * @param {Node | null} endPoint
@@ -1117,28 +1143,6 @@ var Idiomorph = (function () {
       return 0.5 + getPersistentIdNodeCount(ctx, newNode);
     }
     return 0;
-  }
-
-  /**
-   *
-   * @param {Node} startInclusive
-   * @param {Node} endExclusive
-   * @param {MorphContext} ctx
-   * @returns {Node | null}
-   */
-  function removeNodesBetween(startInclusive, endExclusive, ctx) {
-    /** @type {Node | null} */ let cursor = startInclusive;
-    while (cursor && cursor !== endExclusive && !cursor.contains(document.activeElement)) {
-      let tempNode = /** @type {Node} */ (cursor);
-      // TODO: Prefer assigning to a new variable here or expand the type of startInclusive
-      //  to be Node | null
-      cursor = tempNode.nextSibling;
-      if(!removeNode(tempNode, ctx)) {
-        // node removal cancled by hook so stop removing at this point
-        return tempNode;
-      }
-    }
-    return cursor;
   }
 
   /**
