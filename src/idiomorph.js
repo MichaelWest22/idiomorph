@@ -1128,7 +1128,7 @@ var Idiomorph = (function () {
    */
   function removeNodesBetween(startInclusive, endExclusive, ctx) {
     /** @type {Node | null} */ let cursor = startInclusive;
-    while (cursor && cursor !== endExclusive && cursor != document.activeElement) {
+    while (cursor && cursor !== endExclusive && !cursor.contains(document.activeElement)) {
       let tempNode = /** @type {Node} */ (cursor);
       // TODO: Prefer assigning to a new variable here or expand the type of startInclusive
       //  to be Node | null

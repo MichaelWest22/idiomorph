@@ -346,7 +346,42 @@ describe("algorithm", function () {
     }
   });
 
-  it("preserves focus state when parents are reordered", function () {
+  it("preserves focus state when parents are reordered first", function () {
+    getWorkArea().append(
+      make(`
+            <div>
+              <div id="with-focus">
+                <input type="text" id="focus">
+              </div>
+              <div id="with-other">
+                <input type="text" id="other">
+              </div>
+            </div>
+        `),
+    );
+    document.getElementById("focus").focus();
+
+    let finalSrc = `
+            <div>
+              <div id="with-other">
+                <input type="text" id="other">
+              </div>
+              <div id="with-focus">
+                <input type="text" id="focus">
+              </div>
+            </div>
+        `;
+    Idiomorph.morph(getWorkArea(), finalSrc, {
+      morphStyle: "innerHTML",
+    });
+
+    document.activeElement.outerHTML.should.equal(
+      document.getElementById("focus").outerHTML,
+    );
+    getWorkArea().innerHTML.should.equal(finalSrc);
+  });
+
+  it("preserves focus state when parents are reordered second", function () {
     getWorkArea().append(
       make(`
             <div>
@@ -380,6 +415,7 @@ describe("algorithm", function () {
     );
     getWorkArea().innerHTML.should.equal(finalSrc);
   });
+
 
   it("hooks work as expected", function () {
     let beginSrc = `
