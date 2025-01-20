@@ -33,13 +33,15 @@ describe("morphing operations", function () {
       "<div><c>C</c><b>B</b><a>A</a></div>",
       [
         [
-          "Morphed",
-          "<div><a>A</a><b>B</b><c>C</c></div>",
-          "<div><c>C</c><b>B</b><a>A</a></div>",
+          'Morphed',
+          '<div><a>A</a><b>B</b><c>C</c></div>',
+          '<div><c>C</c><b>B</b><a>A</a></div>'
         ],
-        ["Morphed", "<c>C</c>", "<c>C</c>"],
-        ["Morphed", "<b>B</b>", "<b>B</b>"],
-        ["Morphed", "<a>A</a>", "<a>A</a>"],
+        [ 'Removed', '<a>A</a>' ],
+        [ 'Removed', '<b>B</b>' ],
+        [ 'Morphed', '<c>C</c>', '<c>C</c>' ],
+        [ 'Added', '<b>B</b>' ],
+        [ 'Added', '<a>A</a>' ]
       ],
     );
   });

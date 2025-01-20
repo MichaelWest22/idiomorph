@@ -311,9 +311,6 @@ var Idiomorph = (function () {
                 ctx,
                 insertionPoint,
                 bestMatch,
-                // additional args so that we can retain future soft matches
-                newChild.nextSibling,
-                endPoint,
               );
             }
             morphNode(bestMatch, newChild, ctx);
@@ -507,21 +504,12 @@ var Idiomorph = (function () {
      * - Finally, unreusable nodes will have the hooks called, and then are removed
      * @param {MorphContext} ctx
      * @param {Node} node
-     * @param {Node|null} nextNewChild
-     * @param {Node|null} endPoint
      */
-    function removeNode(ctx, node, nextNewChild = null, endPoint = null) {
+    function removeNode(ctx, node) {
       // are we going to id set match this later?
       if (ctx.idMap.has(node) && node instanceof Element) {
         // skip callbacks and move to pantry
         moveBefore(ctx.pantry, node, null);
-
-        // will be soft-matched to an upcoming new sibling?
-      } else if (findBestMatch(ctx, node, nextNewChild, null)) {
-        // skip callbacks and move to the end of the parent for later soft matching
-        moveBefore(/** @type {Element} */ (node.parentNode), node, endPoint);
-
-        // unreusable
       } else {
         // remove for realsies
         if (ctx.callbacks.beforeNodeRemoved(node) === false) return;
@@ -535,16 +523,12 @@ var Idiomorph = (function () {
      * @param {MorphContext} ctx
      * @param {Node} startInclusive
      * @param {Node} endExclusive
-     * @param {Node|null} nextNewChild
-     * @param {Node|null} endPoint
      * @returns {Node|null}
      */
     function removeNodesBetween(
       ctx,
       startInclusive,
       endExclusive,
-      nextNewChild,
-      endPoint,
     ) {
       /** @type {Node | null} */
       let cursor = startInclusive;
@@ -552,9 +536,29 @@ var Idiomorph = (function () {
       while (cursor && cursor !== endExclusive) {
         let tempNode = /** @type {Node} */ (cursor);
         cursor = cursor.nextSibling;
-        removeNode(ctx, tempNode, nextNewChild, endPoint);
+        removeNode(ctx, tempNode);
       }
       return cursor;
+    }
+
+    /**
+     * @param {Node | null} node - node being removed from consideration
+     * @param {string} id - The ID of the element to be moved.
+     * @param {MorphContext} ctx
+     */
+    function removeIdFromMap(node, id, ctx) {
+      while (node) {
+        let idSet = ctx.idMap.get(node);
+        if(idSet) {
+          idSet?.delete(id);
+          if (idSet.size == 0) {
+            ctx.idMap.delete(node)
+          } else {
+            ctx.idMap.set(node,idSet);
+          }
+        }
+        node = node.parentNode;
+      }
     }
 
     /**
@@ -574,6 +578,8 @@ var Idiomorph = (function () {
           ctx.target.querySelector(`#${id}`) ||
             ctx.pantry.querySelector(`#${id}`)
         );
+      // prevent this now relocated id from triggering pantry storage on remove
+      removeIdFromMap(target, id, ctx);
       moveBefore(parentNode, target, after);
       return target;
     }
