@@ -90,10 +90,11 @@ function assertNoFocus() {
   document.activeElement.tagName.should.eql("BODY");
 }
 
-function assertOps(before, after, expectedOps) {
+function assertOps(before, after, expectedOps, singleNode = true) {
   let ops = [];
   let initial = make(before);
   let final = make(after);
+  let finalCopy = document.importNode(final, true);
   Idiomorph.morph(initial, final, {
     callbacks: {
       beforeNodeMorphed: (oldNode, newNode) => {
@@ -114,7 +115,13 @@ function assertOps(before, after, expectedOps) {
       },
     },
   });
-  initial.outerHTML.should.equal(final.outerHTML);
+  if (JSON.stringify(ops) != JSON.stringify(expectedOps)) {
+    console.log('test expected Operations is:');
+    console.log(expectedOps);
+    console.log('test failing Operations is:');
+    console.log(ops);
+  }
+  if(singleNode) initial.outerHTML.should.equal(finalCopy.outerHTML);
   ops.should.eql(expectedOps);
 }
 
