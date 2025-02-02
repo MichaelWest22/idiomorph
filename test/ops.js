@@ -189,7 +189,7 @@ describe("morphing operations", function () {
     );
   });
 
-  it.only("show morph works from pantry instead of trying to update a softmatch", function () {
+  it("show morph works from pantry instead of trying to update a softmatch", function () {
     // When an id node is pantried and then later it is attempted to match and insert
     // it can instead softmatch the id'ed node to an non id'ed node and then try and
     // morph that softmatch instead of inserting from pantry to retain state. 
