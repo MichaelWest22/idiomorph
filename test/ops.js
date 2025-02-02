@@ -218,5 +218,19 @@ describe("morphing operations", function () {
         [ 'Morphed', '<li>C</li>', '<li id="a">A</li>' ],
         [ 'Added', '<li>B</li>' ]
       ]*/
+
+    /*  Note ideally this should morph like this if we can support it:
+      [
+        [
+          'Morphed',
+          '<ul><li id="a">A</li><li>B</li><li>C</li></ul>',
+          '<ul><li>C</li><li id="a">A</li><li>B</li></ul>'
+        ],
+        [ 'Added', '<li>C</li>' ],
+        [ 'Morphed', '<li id="a">A</li>', '<li id="a">A</li>' ],
+        [ 'Morphed', '<li>B</li>', '<li>B</li>' ],
+        [ 'Removed', '<li>C</li>' ]
+      ]
+    */
   });
 });
