@@ -393,7 +393,8 @@ var Idiomorph = (function () {
             // we haven't yet saved a soft match fallback
             if (softMatch === null) {
               // the current soft match will hard match something else in the future, leave it
-              if (!ctx.idMap.has(cursor)) {
+              // also do not soft match if node has a persistent id we want to return from pantry
+              if (!ctx.idMap.has(cursor) && !ctx.persistentIds.has(/** @type {Element} */ (node).id)) {
                 // save this as the fallback if we get through the loop without finding a hard match
                 softMatch = cursor;
               }

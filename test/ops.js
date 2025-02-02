@@ -188,4 +188,35 @@ describe("morphing operations", function () {
       ],
     );
   });
+
+  it.only("show morph works from pantry instead of trying to update a softmatch", function () {
+    // When an id node is pantried and then later it is attempted to match and insert
+    // it can instead softmatch the id'ed node to an non id'ed node and then try and
+    // morph that softmatch instead of inserting from pantry to retain state. 
+    assertOps(
+      "<ul><li id='a'>A</li><li>B</li><li>C</li></ul>",
+      "<ul><li>C</li><li id='a'>A</li><li>B</li></ul>",
+      [
+        [
+          'Morphed',
+          '<ul><li id="a">A</li><li>B</li><li>C</li></ul>',
+          '<ul><li>C</li><li id="a">A</li><li>B</li></ul>'
+        ],
+        [ 'Morphed', '<li>B</li>', '<li>C</li>' ],
+        [ 'Morphed', '<li id="a">A</li>', '<li id="a">A</li>' ],
+        [ 'Morphed', '<li>C</li>', '<li>B</li>' ]
+      ]
+    );
+    /* Example of the failed morphing when it does not return id from pantry:
+      [
+        [
+          'Morphed',
+          '<ul><li id="a">A</li><li>B</li><li>C</li></ul>',
+          '<ul><li>C</li><li id="a">A</li><li>B</li></ul>'
+        ],
+        [ 'Morphed', '<li>B</li>', '<li>C</li>' ],
+        [ 'Morphed', '<li>C</li>', '<li id="a">A</li>' ],
+        [ 'Added', '<li>B</li>' ]
+      ]*/
+  });
 });
