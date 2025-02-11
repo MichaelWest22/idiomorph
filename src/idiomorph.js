@@ -1181,10 +1181,16 @@ var Idiomorph = (function () {
         // the template tag created by idiomorph parsing can serve as a dummy parent
         return /** @type {Element} */ (newContent);
       } else if (newContent instanceof Node) {
-        // a single node is added as a child to a dummy parent
-        const dummyParent = document.createElement("div");
-        dummyParent.append(newContent);
-        return dummyParent;
+        if (newContent.parentNode && !newContent.previousSibling && !newContent.nextSibling) {
+          // if Node is a single child it is safe to return the parent
+          return /** @type {Element} */ (newContent.parentNode);
+        } else {
+          // otherwise wrap in dummy parent and use clone to avoid mutating it
+          const dummyParent = document.createElement("div");
+          const cloneContent = document.importNode(newContent, true);
+          dummyParent.append(cloneContent);
+          return dummyParent;
+        }
       } else {
         // all nodes in the array or HTMLElement collection are consolidated under
         // a single dummy parent element
