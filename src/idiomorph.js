@@ -1056,19 +1056,19 @@ var Idiomorph = (function () {
      * argument and populates id sets for those nodes and all their parents, generating
      * a set of ids contained within all nodes for the entire hierarchy in the DOM
      *
-     * @param {Element|null} nodeParent
-     * @param {Element[]} nodes
+     * @param {Element|null} root
+     * @param {Element[]|NodeListOf<Element>} nodes
      * @param {Set<string>} persistentIds
      * @param {Map<Node, Set<string>>} idMap
      */
-    function populateIdMapForNode(nodeParent, nodes, persistentIds, idMap) {
+    function populateIdMapForNode(root, nodes, persistentIds, idMap) {
       for (const elt of nodes) {
         if (persistentIds.has(elt.id)) {
           /** @type {Element|null} */
           let current = elt;
           // walk up the parent hierarchy of that element, adding the id
           // of element to the parent's id set
-          while (current && current !== nodeParent) {
+          while (current && current !== root) {
             let idSet = idMap.get(current);
             // if the id set doesn't exist, create it and insert it in the  map
             if (idSet == null) {
@@ -1088,15 +1088,15 @@ var Idiomorph = (function () {
      * for a looser definition of "matching" than tradition id matching, and allows child nodes
      * to contribute to a parent nodes matching.
      *
-     * @param {Element} oldContent  the old content that will be morphed
-     * @param {Element} newContent  the new content to morph to
+     * @param {Element} oldNode  the old node that will be morphed
+     * @param {Element} newContent  the new content parentNode to morph to
      * @returns {IdSets} a map of nodes to id sets for the
      */
-    function createIdMaps(oldContent, newContent) {
+    function createIdMaps(oldNode, newContent) {
       // Calculate ids that persist between the two contents exculuding duplicates first
       let oldIdMap = new Map();
       let dupSet = new Set();
-      const oldElts = elementsWithIds(oldContent);
+      const oldElts = elementsWithIds(oldNode);
       for (const oldElt of oldElts) {
         const id = oldElt.id;
         // if already in map then log duplicates to be skipped
@@ -1107,7 +1107,7 @@ var Idiomorph = (function () {
         }
       }
       let persistentIds = new Set();
-      const newElts = elementsWithIds(newContent);
+      const newElts = newContent.querySelectorAll("[id]");
       for (const newElt of newElts) {
         const id = newElt.id;
         const oldTagName = oldIdMap.get(id);
@@ -1127,17 +1127,12 @@ var Idiomorph = (function () {
       /** @type {Map<Node, Set<string>>} */
       let idMap = new Map();
       populateIdMapForNode(
-        oldContent.parentElement,
-        newElts,
-        persistentIds,
-        idMap,
-      );
-      populateIdMapForNode(
-        newContent.parentElement,
+        oldNode.parentElement,
         oldElts,
         persistentIds,
         idMap,
       );
+      populateIdMapForNode(newContent, newElts, persistentIds, idMap);
       return { persistentIds, idMap };
     }
 
