@@ -186,7 +186,8 @@ var Idiomorph = (function () {
    * @returns {Node[]}
    */
   function morphOuterHTML(ctx, oldNode, newNode) {
-    const oldParent = normalizeParent(oldNode);
+    // oldParent can be a document or documentFragment but we can treat these as Element
+    const oldParent = /** @type {Element} */ (oldNode.parentNode);
 
     // basis for calulating which nodes were morphed
     // since there may be unmorphed sibling nodes
@@ -1180,14 +1181,10 @@ var Idiomorph = (function () {
         // the template tag created by idiomorph parsing can serve as a dummy parent
         return /** @type {Element} */ (newContent);
       } else if (newContent instanceof Node) {
-        if (newContent.parentNode) {
-          return /** @type {Element} */ (newContent.parentNode);
-        } else {
-          // a single node is added as a child to a dummy parent
-          const dummyParent = document.createElement("div");
-          dummyParent.append(newContent);
-          return dummyParent;
-        }
+        // a single node is added as a child to a dummy parent
+        const dummyParent = document.createElement("div");
+        dummyParent.append(newContent);
+        return dummyParent;
       } else {
         // all nodes in the array or HTMLElement collection are consolidated under
         // a single dummy parent element

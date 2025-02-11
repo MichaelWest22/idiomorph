@@ -561,4 +561,24 @@ describe("Core morphing tests", function () {
     Idiomorph.morph(initial.body, final.body);
     initial.body.outerHTML.should.equal(finalSrc);
   });
+
+  it("test pathlogical case of oldNode and newContent both being in the same document with siblings", function () {
+    // Note that during the start of the morph the final world node is moved into a new dummy parent before
+    // being used for the morph which results in only one copy in the end
+    let context = make(`
+      <div>
+        <div>hello</div><div>world</div>
+        <p>ignore me</p>
+      </div>
+    `);
+
+    let [initial, final] = context.querySelectorAll("div");
+    let ret = Idiomorph.morph(initial, final);
+    initial.outerHTML.should.equal(final.outerHTML);
+    ret.map((e) => e.outerHTML).should.eql([final.outerHTML]);
+    context.innerHTML.should.equal(`
+        <div>world</div>
+        <p>ignore me</p>
+      `);
+  });
 });
