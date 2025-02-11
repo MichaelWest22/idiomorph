@@ -1181,7 +1181,11 @@ var Idiomorph = (function () {
         // the template tag created by idiomorph parsing can serve as a dummy parent
         return /** @type {Element} */ (newContent);
       } else if (newContent instanceof Node) {
-        if (newContent.parentNode && !newContent.previousSibling && !newContent.nextSibling) {
+        if (
+          newContent.parentNode &&
+          !newContent.previousSibling &&
+          !newContent.nextSibling
+        ) {
           // if Node is a single child it is safe to return the parent
           return /** @type {Element} */ (newContent.parentNode);
         } else {
