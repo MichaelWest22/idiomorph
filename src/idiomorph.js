@@ -1057,7 +1057,7 @@ var Idiomorph = (function () {
      * a set of ids contained within all nodes for the entire hierarchy in the DOM
      *
      * @param {Element|null} root
-     * @param {Element[]} nodes
+     * @param {Element[]|NodeListOf<Element>} nodes
      * @param {Set<string>} persistentIds
      * @param {Map<Node, Set<string>>} idMap
      */
@@ -1068,7 +1068,7 @@ var Idiomorph = (function () {
           let current = elt;
           // walk up the parent hierarchy of that element, adding the id
           // of element to the parent's id set
-          while (current) {
+          while (current && current !== root) {
             let idSet = idMap.get(current);
             // if the id set doesn't exist, create it and insert it in the  map
             if (idSet == null) {
@@ -1076,8 +1076,6 @@ var Idiomorph = (function () {
               idMap.set(current, idSet);
             }
             idSet.add(elt.id);
-
-            if (current === root) break;
             current = current.parentElement;
           }
         }
@@ -1109,7 +1107,7 @@ var Idiomorph = (function () {
         }
       }
       let persistentIds = new Set();
-      const newElts = elementsWithIds(newContent);
+      const newElts = newContent.querySelectorAll("[id]");
       for (const newElt of newElts) {
         const id = newElt.id;
         const oldTagName = oldIdMap.get(id);
@@ -1128,15 +1126,18 @@ var Idiomorph = (function () {
 
       /** @type {Map<Node, Set<string>>} */
       let idMap = new Map();
-      populateIdMapForNode(oldContent, oldElts, persistentIds, idMap);
-
-      let newRoot = newContent;
-      // if newContent is a duck-typed parent, pass its single child node as the root to halt upwards iteration
-      /** @ts-ignore */
-      if (newContent.__idiomorphDummyParent) {
-        newRoot = /** @type {Element} */ (newContent.childNodes[0]);
-      }
-      populateIdMapForNode(newRoot, newElts, persistentIds, idMap);
+      populateIdMapForNode(
+        oldContent.parentElement,
+        oldElts,
+        persistentIds,
+        idMap,
+      );
+      populateIdMapForNode(
+        newContent.parentElement,
+        newElts,
+        persistentIds,
+        idMap,
+      );
 
       return { persistentIds, idMap };
     }
@@ -1187,6 +1188,7 @@ var Idiomorph = (function () {
           return /** @type {Element} */ (
             /** @type {unknown} */ ({
               childNodes: [newContent],
+              parentElement: newContent.parentElement,
               /** @ts-ignore - cover your eyes for a minute, tsc */
               querySelectorAll: (s) => {
                 /** @ts-ignore */
