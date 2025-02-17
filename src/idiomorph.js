@@ -144,12 +144,26 @@ var Idiomorph = (function () {
     restoreFocus: true,
   };
 
+  /** @type {Map<string, Config>} */
+  let configs = new Map();
+  /**
+   * Add a saved config
+   * @param {string} name
+   * @param {Config} config
+   * @returns {void}
+   */
+  function addConfig(name, config) {
+    // @ts-ignore we can delete this property
+    delete configs.name;
+    configs.set(name, config);
+  }
+
   /**
    * Core idiomorph function for morphing one DOM tree to another
    *
    * @param {Element | Document} oldNode
    * @param {Element | Node | HTMLCollection | Node[] | string | null} newContent
-   * @param {Config} [config]
+   * @param {Config|string} [config]
    * @returns {Promise<Node[]> | Node[]}
    */
   function morph(oldNode, newContent, config = {}) {
@@ -853,12 +867,10 @@ var Idiomorph = (function () {
         const promises = handleHeadElement(oldHead, newHead, ctx);
         // when head promises resolve, proceed ignoring the head tag
         return Promise.all(promises).then(() => {
-          const newCtx = Object.assign(ctx, {
-            head: {
-              block: false,
-              ignore: true,
-            },
-          });
+          const newCtx = {
+            ...ctx,
+            ...{ head: { block: false, ignore: true } },
+          };
           return callback(newCtx);
         });
       }
@@ -976,7 +988,7 @@ var Idiomorph = (function () {
      *
      * @param {Element} oldNode
      * @param {Element} newContent
-     * @param {Config} config
+     * @param {Config|string} config
      * @returns {MorphContext}
      */
     function createMorphContext(oldNode, newContent, config) {
@@ -1007,24 +1019,39 @@ var Idiomorph = (function () {
     /**
      * Deep merges the config object and the Idiomorph.defaults object to
      * produce a final configuration object
-     * @param {Config} config
+     * @param {Config|string} config
      * @returns {ConfigInternal}
      */
     function mergeDefaults(config) {
-      let finalConfig = Object.assign({}, defaults);
+      let finalConfig = defaults;
+      if (typeof config == "string") {
+        for (const configStr of config.split(",")) {
+          const configVal = configs.get(configStr);
+          if (configVal) {
+            finalConfig = mergeConfig(finalConfig, configVal);
+          }
+        }
+      } else {
+        finalConfig = mergeConfig(finalConfig, config);
+      }
+      return finalConfig;
+    }
 
-      // copy top level stuff into final config
-      Object.assign(finalConfig, config);
+    /**
+     * @param {ConfigInternal} defaults
+     * @param {Config} config
+     * @returns {ConfigInternal}
+     */
+    function mergeConfig(defaults, config) {
+      let finalConfig = { ...defaults };
+
+      // @ts-ignore copy top level stuff into final config ignoring trivial type differences
+      finalConfig = { ...finalConfig, ...config };
 
       // copy callbacks into final config (do this to deep merge the callbacks)
-      finalConfig.callbacks = Object.assign(
-        {},
-        defaults.callbacks,
-        config.callbacks,
-      );
-
+      finalConfig.callbacks = { ...defaults.callbacks, ...config.callbacks };
       // copy head config into final config  (do this to deep merge the head)
-      finalConfig.head = Object.assign({}, defaults.head, config.head);
+      finalConfig.head = { ...defaults.head, ...config.head };
 
       return finalConfig;
     }
@@ -1277,5 +1304,6 @@ var Idiomorph = (function () {
   return {
     morph,
     defaults,
+    addConfig,
   };
 })();
