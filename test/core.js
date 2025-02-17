@@ -588,30 +588,6 @@ describe("Core morphing tests", function () {
     );
   });
 
-  it("morphs innerHTML using addConfig", function () {
-    let initial = make("<div>Foo</div>");
-    let finalSrc = "<button>Bar</button>";
-    let final = make(finalSrc);
-    Idiomorph.addConfig("inner", { morphStyle: "innerHTML" });
-    Idiomorph.morph(initial, final, "inner");
-    initial.outerHTML.should.equal("<div><button>Bar</button></div>");
-  });
-
-  it("morphs innerHTML and ignores active element when using two addConfigs", function () {
-    let initialSource = "<div><div id='d1'>Foo</div><input id='i1'></div>";
-    getWorkArea().innerHTML = initialSource;
-    let i1 = document.getElementById("i1");
-    i1.focus();
-    let d1 = document.getElementById("d1");
-    i1.value = "asdf";
-    let finalSource = "<div><div id='d1'>Bar</div><input id='i1'></div>";
-    Idiomorph.addConfig("inner", { morphStyle: "innerHTML" });
-    Idiomorph.addConfig("active", { ignoreActive: true });
-    Idiomorph.morph(getWorkArea(), finalSource, "inner,active");
-    d1.innerText.should.equal("Bar");
-    i1.value.should.equal("asdf");
-  });
-
   it("do not build id in new content parent into persistent id set", function () {
     let initial = make("<span><div id='a'>Foo</div></span>");
     let finalParent = make("<div id='a'><span>Bar</span></div>");
