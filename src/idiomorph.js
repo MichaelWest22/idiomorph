@@ -186,7 +186,8 @@ var Idiomorph = (function () {
    * @returns {Node[]}
    */
   function morphOuterHTML(ctx, oldNode, newNode) {
-    const oldParent = normalizeParent(oldNode);
+    // oldParent can be a document or documentFragment but we can treat these as Element
+    const oldParent = /** @type {Element} */ (oldNode.parentNode);
 
     // basis for calulating which nodes were morphed
     // since there may be unmorphed sibling nodes
@@ -1112,10 +1113,7 @@ var Idiomorph = (function () {
       /** @type {Map<Node, Set<string>>} */
       let idMap = new Map();
       populateIdMapWithTree(idMap, persistentIds, oldContent, oldIdElements);
-
-      /** @ts-ignore - if newContent is a duck-typed parent, pass its single child node as the root to halt upwards iteration */
-      const newRoot = newContent.__idiomorphRoot || newContent;
-      populateIdMapWithTree(idMap, persistentIds, newRoot, newIdElements);
+      populateIdMapWithTree(idMap, persistentIds, newContent, newIdElements);
 
       return { persistentIds, idMap };
     }
@@ -1195,17 +1193,10 @@ var Idiomorph = (function () {
         // the template tag created by idiomorph parsing can serve as a dummy parent
         return /** @type {Element} */ (newContent);
       } else if (newContent instanceof Node) {
-        if (newContent.parentNode) {
-          // we can't use the parent directly because newContent may have siblings
-          // that we don't want in the morph, and reparenting might be expensive (TODO is it?),
-          // so we create a duck-typed parent node instead.
-          return createDuckTypedParent(newContent);
-        } else {
-          // a single node is added as a child to a dummy parent
-          const dummyParent = document.createElement("div");
-          dummyParent.append(newContent);
-          return dummyParent;
-        }
+        // a single node is added as a child to a dummy parent
+        const dummyParent = document.createElement("div");
+        dummyParent.append(newContent);
+        return dummyParent;
       } else {
         // all nodes in the array or HTMLElement collection are consolidated under
         // a single dummy parent element
@@ -1215,36 +1206,6 @@ var Idiomorph = (function () {
         }
         return dummyParent;
       }
-    }
-
-    /**
-     * Creates a fake duck-typed parent element to wrap a single node, without actually reparenting it.
-     * "If it walks like a duck, and quacks like a duck, then it must be a duck!" -- James Whitcomb Riley (1849–1916)
-     *
-     * @param {Node} newContent
-     * @returns {Element}
-     */
-    function createDuckTypedParent(newContent) {
-      return /** @type {Element} */ (
-        /** @type {unknown} */ ({
-          childNodes: [newContent],
-          /** @ts-ignore - cover your eyes for a minute, tsc */
-          querySelectorAll: (s) => {
-            /** @ts-ignore */
-            const elements = newContent.querySelectorAll(s);
-            /** @ts-ignore */
-            return newContent.matches(s) ? [newContent, ...elements] : elements;
-          },
-          /** @ts-ignore */
-          insertBefore: (n, r) => newContent.parentNode.insertBefore(n, r),
-          /** @ts-ignore */
-          moveBefore: (n, r) => newContent.parentNode.moveBefore(n, r),
-          // for later use with populateIdMapWithTree to halt upwards iteration
-          get __idiomorphRoot() {
-            return newContent;
-          },
-        })
-      );
     }
 
     /**
