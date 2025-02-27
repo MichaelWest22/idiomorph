@@ -1068,8 +1068,8 @@ var Idiomorph = (function () {
      *
      * @param {Map<Node, Set<string>>} idMap
      * @param {Set<string>} persistentIds
-     * @param {Element} root
-     * @param {Element[]} elements
+     * @param {Element|null} root
+     * @param {Element[]|NodeListOf<Element>} elements
      */
     function populateIdMapWithTree(idMap, persistentIds, root, elements) {
       for (const elt of elements) {
@@ -1078,7 +1078,7 @@ var Idiomorph = (function () {
           let current = elt;
           // walk up the parent hierarchy of that element, adding the id
           // of element to the parent's id set
-          while (current) {
+          while (current && current !== root) {
             let idSet = idMap.get(current);
             // if the id set doesn't exist, create it and insert it in the map
             if (idSet == null) {
@@ -1086,8 +1086,6 @@ var Idiomorph = (function () {
               idMap.set(current, idSet);
             }
             idSet.add(elt.id);
-
-            if (current === root) break;
             current = current.parentElement;
           }
         }
@@ -1100,19 +1098,24 @@ var Idiomorph = (function () {
      * for a looser definition of "matching" than tradition id matching, and allows child nodes
      * to contribute to a parent nodes matching.
      *
-     * @param {Element} oldContent  the old content that will be morphed
-     * @param {Element} newContent  the new content to morph to
+     * @param {Element} oldNode  the old node that will be morphed
+     * @param {Element} newContent  the new content parentNode to morph to
      * @returns {IdSets}
      */
-    function createIdMaps(oldContent, newContent) {
-      const oldIdElements = findIdElements(oldContent);
-      const newIdElements = findIdElements(newContent);
+    function createIdMaps(oldNode, newContent) {
+      const oldIdElements = findIdElements(oldNode);
+      const newIdElements = newContent.querySelectorAll("[id]");
 
       const persistentIds = createPersistentIds(oldIdElements, newIdElements);
 
       /** @type {Map<Node, Set<string>>} */
       let idMap = new Map();
-      populateIdMapWithTree(idMap, persistentIds, oldContent, oldIdElements);
+      populateIdMapWithTree(
+        idMap,
+        persistentIds,
+        oldNode.parentElement,
+        oldIdElements,
+      );
       populateIdMapWithTree(idMap, persistentIds, newContent, newIdElements);
 
       return { persistentIds, idMap };
@@ -1122,7 +1125,7 @@ var Idiomorph = (function () {
      * This function computes the set of ids that persist between the two contents excluding duplicates
      *
      * @param {Element[]} oldIdElements
-     * @param {Element[]} newIdElements
+     * @param {NodeListOf<Element>} newIdElements
      * @returns {Set<string>}
      */
     function createPersistentIds(oldIdElements, newIdElements) {
@@ -1193,10 +1196,20 @@ var Idiomorph = (function () {
         // the template tag created by idiomorph parsing can serve as a dummy parent
         return /** @type {Element} */ (newContent);
       } else if (newContent instanceof Node) {
-        // a single node is added as a child to a dummy parent
-        const dummyParent = document.createElement("div");
-        dummyParent.append(newContent);
-        return dummyParent;
+        if (
+          newContent.parentNode &&
+          !newContent.previousSibling &&
+          !newContent.nextSibling
+        ) {
+          // if Node is a single child it is safe to return the parent
+          return /** @type {Element} */ (newContent.parentNode);
+        } else {
+          // otherwise wrap in dummy parent and use clone to avoid mutating it
+          const dummyParent = document.createElement("div");
+          const cloneContent = document.importNode(newContent, true);
+          dummyParent.append(cloneContent);
+          return dummyParent;
+        }
       } else {
         // all nodes in the array or HTMLElement collection are consolidated under
         // a single dummy parent element
