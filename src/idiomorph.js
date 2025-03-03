@@ -29,6 +29,7 @@
  * @property {boolean} [ignoreActive]
  * @property {boolean} [ignoreActiveValue]
  * @property {boolean} [restoreFocus]
+ * @property {string} [eventCallbacks]
  * @property {ConfigCallbacks} [callbacks]
  * @property {ConfigHead} [head]
  */
@@ -70,6 +71,7 @@
  * @property {boolean} [ignoreActive]
  * @property {boolean} [ignoreActiveValue]
  * @property {boolean} [restoreFocus]
+ * @property {string} [eventCallbacks]
  * @property {ConfigCallbacksInternal} callbacks
  * @property {ConfigHeadInternal} head
  */
@@ -142,6 +144,7 @@ var Idiomorph = (function () {
       afterHeadMorphed: noOp,
     },
     restoreFocus: true,
+    eventCallbacks: "beforeNodeAdded,afterNodeAdded,beforeNodeMorphed,afterNodeMorphed,beforeNodeRemoved,afterNodeRemoved,beforeAttributeUpdated",
   };
 
   /**
@@ -187,10 +190,11 @@ var Idiomorph = (function () {
    */
   function morphOuterHTML(ctx, oldNode, newNode) {
     const oldParent = normalizeParent(oldNode);
+    const realParent = /** @type {Element} */ (oldNode.parentNode);
 
     // basis for calulating which nodes were morphed
     // since there may be unmorphed sibling nodes
-    let childNodes = Array.from(oldParent.childNodes);
+    let childNodes = Array.from(realParent.childNodes);
     const index = childNodes.indexOf(oldNode);
     // how many elements are to the right of the oldNode
     const rightMargin = childNodes.length - (index + 1);
@@ -205,7 +209,7 @@ var Idiomorph = (function () {
     );
 
     // return just the morphed nodes
-    childNodes = Array.from(oldParent.childNodes);
+    childNodes = Array.from(realParent.childNodes);
     return childNodes.slice(index, childNodes.length - rightMargin);
   }
 
@@ -1011,6 +1015,70 @@ var Idiomorph = (function () {
     }
 
     /**
+     * @param {Node} node
+     * @param {string} name
+     * @param {boolean} cancelable
+     * @param {function} callback
+     * @returns {boolean}
+     */
+    function nodeEventCallback(node, name, cancelable, callback) {
+      const eventResponse = document.dispatchEvent(
+        new CustomEvent(name, {
+          cancelable,
+          detail: { node },
+        }),
+      );
+      const callbackResponse = callback(node);
+      return eventResponse && callbackResponse;
+    }
+
+    /**
+     * @param {Node} oldNode
+     * @param {Node} newNode
+     * @param {string} name
+     * @param {boolean} cancelable
+     * @param {function} callback
+     * @returns {boolean}
+     */
+    function morphEventCallback(oldNode, newNode, name, cancelable, callback) {
+      const eventResponse = document.dispatchEvent(
+        new CustomEvent(name, {
+          cancelable,
+          detail: { oldNode, newNode },
+        }),
+      );
+      const callbackResponse = callback(oldNode, newNode);
+      return eventResponse && callbackResponse;
+    }
+
+    /**
+     * @param {string} attributeName
+     * @param {Element} node
+     * @param {string} mutationType
+     * @param {string} name
+     * @param {boolean} cancelable
+     * @param {function} callback
+     * @returns {boolean}
+     */
+    function attributeEventCallback(
+      attributeName,
+      node,
+      mutationType,
+      name,
+      cancelable,
+      callback,
+    ) {
+      const eventResponse = document.dispatchEvent(
+        new CustomEvent(name, {
+          cancelable,
+          detail: { attributeName, node, mutationType },
+        }),
+      );
+      const callbackResponse = callback(attributeName, node, mutationType);
+      return eventResponse && callbackResponse;
+    }
+
+    /**
      * Deep merges the config object and the Idiomorph.defaults object to
      * produce a final configuration object
      * @param {Config} config
@@ -1031,7 +1099,45 @@ var Idiomorph = (function () {
 
       // copy head config into final config  (do this to deep merge the head)
       finalConfig.head = Object.assign({}, defaults.head, config.head);
-
+      // @ts-ignore eventCallbacks will always be a string from defaults
+      for (const event of finalConfig.eventCallbacks.split(",")) {
+        // @ts-ignore safe to lookup event name as we check it is defined before using it
+        const callback = finalConfig.callbacks[event];
+        if (callback) {
+          const cancelable = event.indexOf("before") === 0;
+          const eventName =
+            "im-" + event.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+          if (event.indexOf("Morphed") !== -1) {
+            // @ts-ignore 
+            finalConfig.callbacks[event] = (oldNode, newNode) => {
+              return morphEventCallback(
+                oldNode,
+                newNode,
+                eventName,
+                cancelable,
+                callback,
+              );
+            };
+          } else if (event.indexOf("Updated") !== -1) {
+            // @ts-ignore
+            finalConfig.callbacks[event] = (attributeName, node, mutType) => {
+              return attributeEventCallback(
+                attributeName,
+                node,
+                mutType,
+                eventName,
+                cancelable,
+                callback,
+              );
+            };
+          } else {
+            // @ts-ignore
+            finalConfig.callbacks[event] = (node) => {
+              return nodeEventCallback(node, eventName, cancelable, callback);
+            };
+          }
+        }
+      }
       return finalConfig;
     }
 
