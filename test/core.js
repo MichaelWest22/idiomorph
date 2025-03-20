@@ -216,6 +216,13 @@ describe("Core morphing tests", function () {
     initial.body.outerHTML.should.equal(finalSrc);
   });
 
+  it("can morph a body tag properly as string", function () {
+    let initial = parseHTML("<body>Foo</body>");
+    let finalSrc = '<body foo="bar">Foo</body>';
+    Idiomorph.morph(initial.body, finalSrc);
+    initial.body.outerHTML.should.equal(finalSrc);
+  });
+
   it("can morph a full document properly", function () {
     let initial = parseHTML("<html><body>Foo</body></html>");
     let finalSrc =

@@ -152,8 +152,8 @@ var Idiomorph = (function () {
       endPoint, // end point for iteration
     );
 
-    const nodes = []
-    // return array from the first node added to before the last node 
+    const nodes = [];
+    // return array from the first node added to before the last node
     let cursor = beforeStartPoint?.nextSibling || oldParent.firstChild;
     while (cursor && cursor != endPoint) {
       nodes.push(cursor);
@@ -161,7 +161,6 @@ var Idiomorph = (function () {
     }
     ctx.pantry.remove();
     return nodes;
-
   }
 
   const morphChildren = (function () {
