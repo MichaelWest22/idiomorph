@@ -224,56 +224,6 @@ describe("Core morphing tests", function () {
     initial.documentElement.outerHTML.should.equal(finalSrc);
   });
 
-  it("ignores active input value when ignoreActiveValue is true", function () {
-    let parent = make("<div><input value='foo'></div>");
-    document.body.append(parent);
-
-    let initial = parent.querySelector("input");
-
-    // morph
-    let finalSrc = '<input value="bar">';
-    Idiomorph.morph(initial, finalSrc, { morphStyle: "outerHTML" });
-    initial.outerHTML.should.equal('<input value="bar">');
-
-    initial.focus();
-
-    document.activeElement.should.equal(initial);
-
-    let finalSrc2 = '<input class="foo" value="doh">';
-    Idiomorph.morph(initial, finalSrc2, {
-      morphStyle: "outerHTML",
-      ignoreActiveValue: true,
-    });
-    initial.value.should.equal("bar");
-    initial.classList.value.should.equal("foo");
-
-    document.body.removeChild(parent);
-  });
-
-  it("does not ignore body when ignoreActiveValue is true and no element has focus", function () {
-    let parent = make("<div><input value='foo'></div>");
-    document.body.append(parent);
-
-    let initial = parent.querySelector("input");
-
-    // morph
-    let finalSrc = '<input value="bar">';
-    Idiomorph.morph(initial, finalSrc, { morphStyle: "outerHTML" });
-    initial.outerHTML.should.equal('<input value="bar">');
-
-    document.activeElement.should.equal(document.body);
-
-    let finalSrc2 = '<input class="foo" value="doh">';
-    Idiomorph.morph(initial, finalSrc2, {
-      morphStyle: "outerHTML",
-      ignoreActiveValue: true,
-    });
-    initial.value.should.equal("doh");
-    initial.classList.value.should.equal("foo");
-
-    document.body.removeChild(parent);
-  });
-
   it("can ignore attributes w/ the beforeAttributeUpdated callback", function () {
     let parent = make("<div><input value='foo'></div>");
     document.body.append(parent);
@@ -346,29 +296,6 @@ describe("Core morphing tests", function () {
       },
     });
     parent.innerHTML.should.equal("<p>1</p><p>2</p><p>4</p>");
-
-    document.body.removeChild(parent);
-  });
-
-  it("ignores active textarea value when ignoreActiveValue is true", function () {
-    let parent = make("<div><textarea>foo</textarea></div>");
-    document.body.append(parent);
-    let initial = parent.querySelector("textarea");
-
-    let finalSrc = "<textarea>bar</textarea>";
-    Idiomorph.morph(initial, finalSrc, { morphStyle: "outerHTML" });
-    initial.outerHTML.should.equal("<textarea>bar</textarea>");
-
-    initial.focus();
-
-    document.activeElement.should.equal(initial);
-
-    let finalSrc2 = '<textarea class="foo">doh</textarea>';
-    Idiomorph.morph(initial, finalSrc2, {
-      morphStyle: "outerHTML",
-      ignoreActiveValue: true,
-    });
-    initial.outerHTML.should.equal('<textarea class="foo">bar</textarea>');
 
     document.body.removeChild(parent);
   });

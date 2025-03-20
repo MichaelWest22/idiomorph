@@ -1,16 +1,4 @@
 /**
- * @typedef {object} ConfigHead
- *
- * @property {'merge' | 'append' | 'morph' | 'none'} [style]
- * @property {boolean} [block]
- * @property {boolean} [ignore]
- * @property {function(Element): boolean} [shouldPreserve]
- * @property {function(Element): boolean} [shouldReAppend]
- * @property {function(Element): boolean} [shouldRemove]
- * @property {function(Element, {added: Node[], kept: Element[], removed: Element[]}): void} [afterHeadMorphed]
- */
-
-/**
  * @typedef {object} ConfigCallbacks
  *
  * @property {function(Node): boolean} [beforeNodeAdded]
@@ -27,28 +15,13 @@
  *
  * @property {'outerHTML' | 'innerHTML'} [morphStyle]
  * @property {boolean} [ignoreActive]
- * @property {boolean} [ignoreActiveValue]
- * @property {boolean} [restoreFocus]
  * @property {ConfigCallbacks} [callbacks]
- * @property {ConfigHead} [head]
  */
 
 /**
  * @typedef {function} NoOp
  *
  * @returns {void}
- */
-
-/**
- * @typedef {object} ConfigHeadInternal
- *
- * @property {'merge' | 'append' | 'morph' | 'none'} style
- * @property {boolean} [block]
- * @property {boolean} [ignore]
- * @property {(function(Element): boolean) | NoOp} shouldPreserve
- * @property {(function(Element): boolean) | NoOp} shouldReAppend
- * @property {(function(Element): boolean) | NoOp} shouldRemove
- * @property {(function(Element, {added: Node[], kept: Element[], removed: Element[]}): void) | NoOp} afterHeadMorphed
  */
 
 /**
@@ -68,10 +41,8 @@
  *
  * @property {'outerHTML' | 'innerHTML'} morphStyle
  * @property {boolean} [ignoreActive]
- * @property {boolean} [ignoreActiveValue]
- * @property {boolean} [restoreFocus]
  * @property {ConfigCallbacksInternal} callbacks
- * @property {ConfigHeadInternal} head
+
  */
 
 /**
@@ -105,12 +76,9 @@ var Idiomorph = (function () {
    * @property {ConfigInternal} config
    * @property {ConfigInternal['morphStyle']} morphStyle
    * @property {ConfigInternal['ignoreActive']} ignoreActive
-   * @property {ConfigInternal['ignoreActiveValue']} ignoreActiveValue
-   * @property {ConfigInternal['restoreFocus']} restoreFocus
    * @property {Map<Node, Set<string>>} idMap
    * @property {Set<string>} persistentIds
    * @property {ConfigInternal['callbacks']} callbacks
-   * @property {ConfigInternal['head']} head
    * @property {HTMLDivElement} pantry
    */
 
@@ -134,14 +102,6 @@ var Idiomorph = (function () {
       afterNodeRemoved: noOp,
       beforeAttributeUpdated: noOp,
     },
-    head: {
-      style: "merge",
-      shouldPreserve: (elt) => elt.getAttribute("im-preserve") === "true",
-      shouldReAppend: (elt) => elt.getAttribute("im-re-append") === "true",
-      shouldRemove: noOp,
-      afterHeadMorphed: noOp,
-    },
-    restoreFocus: true,
   };
 
   /**
@@ -157,24 +117,13 @@ var Idiomorph = (function () {
     const newNode = normalizeParent(newContent);
     const ctx = createMorphContext(oldNode, newNode, config);
 
-    const morphedNodes = saveAndRestoreFocus(ctx, () => {
-      return withHeadBlocking(
-        ctx,
-        oldNode,
-        newNode,
-        /** @param {MorphContext} ctx */ (ctx) => {
-          if (ctx.morphStyle === "innerHTML") {
-            morphChildren(ctx, oldNode, newNode);
-            return Array.from(oldNode.childNodes);
-          } else {
-            return morphOuterHTML(ctx, oldNode, newNode);
-          }
-        },
-      );
-    });
-
-    ctx.pantry.remove();
-    return morphedNodes;
+    if (ctx.morphStyle === "innerHTML") {
+      morphChildren(ctx, oldNode, newNode);
+      ctx.pantry.remove();
+      return Array.from(oldNode.childNodes);
+    } else {
+      return morphOuterHTML(ctx, oldNode, newNode);
+    }
   }
 
   /**
@@ -195,45 +144,9 @@ var Idiomorph = (function () {
       oldNode, // start point for iteration
       oldNode.nextSibling, // end point for iteration
     );
+    ctx.pantry.remove();
     // this is safe even with siblings, because normalizeParent returns a SlicedParentNode if needed.
     return Array.from(oldParent.childNodes);
-  }
-
-  /**
-   * @param {MorphContext} ctx
-   * @param {Function} fn
-   * @returns {Promise<Node[]> | Node[]}
-   */
-  function saveAndRestoreFocus(ctx, fn) {
-    if (!ctx.config.restoreFocus) return fn();
-    let activeElement =
-      /** @type {HTMLInputElement|HTMLTextAreaElement|null} */ (
-        document.activeElement
-      );
-
-    // don't bother if the active element is not an input or textarea
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement
-      )
-    ) {
-      return fn();
-    }
-
-    const { id: activeElementId, selectionStart, selectionEnd } = activeElement;
-
-    const results = fn();
-
-    if (activeElementId && activeElementId !== document.activeElement?.id) {
-      activeElement = ctx.target.querySelector(`[id="${activeElementId}"]`);
-      activeElement?.focus();
-    }
-    if (activeElement && !activeElement.selectionEnd && selectionEnd) {
-      activeElement.setSelectionRange(selectionStart, selectionEnd);
-    }
-
-    return results;
   }
 
   const morphChildren = (function () {
@@ -617,25 +530,9 @@ var Idiomorph = (function () {
         return oldNode;
       }
 
-      if (oldNode instanceof HTMLHeadElement && ctx.head.ignore) {
-        // ignore the head element
-      } else if (
-        oldNode instanceof HTMLHeadElement &&
-        ctx.head.style !== "morph"
-      ) {
-        // ok to cast: if newContent wasn't also a <head>, it would've got caught in the `!isSoftMatch` branch above
-        handleHeadElement(
-          oldNode,
-          /** @type {HTMLHeadElement} */ (newContent),
-          ctx,
-        );
-      } else {
-        morphAttributes(oldNode, newContent, ctx);
-        if (!ignoreValueOfActiveElement(oldNode, ctx)) {
-          // @ts-ignore newContent can be a node here because .firstChild will be null
-          morphChildren(ctx, oldNode, newContent);
-        }
-      }
+      morphAttributes(oldNode, newContent, ctx);
+      // @ts-ignore newContent can be a node here because .firstChild will be null
+      morphChildren(ctx, oldNode, newContent);
       ctx.callbacks.afterNodeMorphed(oldNode, newContent);
       return oldNode;
     }
@@ -683,9 +580,7 @@ var Idiomorph = (function () {
           }
         }
 
-        if (!ignoreValueOfActiveElement(oldElt, ctx)) {
-          syncInputValue(oldElt, newElt, ctx);
-        }
+        syncInputValue(oldElt, newElt, ctx);
       }
 
       // sync text nodes
@@ -803,167 +698,14 @@ var Idiomorph = (function () {
      * @returns {boolean} true if the attribute should be ignored, false otherwise
      */
     function ignoreAttribute(attr, element, updateType, ctx) {
-      if (
-        attr === "value" &&
-        ctx.ignoreActiveValue &&
-        element === document.activeElement
-      ) {
-        return true;
-      }
       return (
         ctx.callbacks.beforeAttributeUpdated(attr, element, updateType) ===
         false
       );
     }
 
-    /**
-     * @param {Node} possibleActiveElement
-     * @param {MorphContext} ctx
-     * @returns {boolean}
-     */
-    function ignoreValueOfActiveElement(possibleActiveElement, ctx) {
-      return (
-        !!ctx.ignoreActiveValue &&
-        possibleActiveElement === document.activeElement &&
-        possibleActiveElement !== document.body
-      );
-    }
-
     return morphNode;
   })();
-
-  //=============================================================================
-  // Head Management Functions
-  //=============================================================================
-  /**
-   * @param {MorphContext} ctx
-   * @param {Element} oldNode
-   * @param {Element} newNode
-   * @param {function} callback
-   * @returns {Node[] | Promise<Node[]>}
-   */
-  function withHeadBlocking(ctx, oldNode, newNode, callback) {
-    if (ctx.head.block) {
-      const oldHead = oldNode.querySelector("head");
-      const newHead = newNode.querySelector("head");
-      if (oldHead && newHead) {
-        const promises = handleHeadElement(oldHead, newHead, ctx);
-        // when head promises resolve, proceed ignoring the head tag
-        return Promise.all(promises).then(() => {
-          const newCtx = Object.assign(ctx, {
-            head: {
-              block: false,
-              ignore: true,
-            },
-          });
-          return callback(newCtx);
-        });
-      }
-    }
-    // just proceed if we not head blocking
-    return callback(ctx);
-  }
-
-  /**
-   *  The HEAD tag can be handled specially, either w/ a 'merge' or 'append' style
-   *
-   * @param {Element} oldHead
-   * @param {Element} newHead
-   * @param {MorphContext} ctx
-   * @returns {Promise<void>[]}
-   */
-  function handleHeadElement(oldHead, newHead, ctx) {
-    let added = [];
-    let removed = [];
-    let preserved = [];
-    let nodesToAppend = [];
-
-    // put all new head elements into a Map, by their outerHTML
-    let srcToNewHeadNodes = new Map();
-    for (const newHeadChild of newHead.children) {
-      srcToNewHeadNodes.set(newHeadChild.outerHTML, newHeadChild);
-    }
-
-    // for each elt in the current head
-    for (const currentHeadElt of oldHead.children) {
-      // If the current head element is in the map
-      let inNewContent = srcToNewHeadNodes.has(currentHeadElt.outerHTML);
-      let isReAppended = ctx.head.shouldReAppend(currentHeadElt);
-      let isPreserved = ctx.head.shouldPreserve(currentHeadElt);
-      if (inNewContent || isPreserved) {
-        if (isReAppended) {
-          // remove the current version and let the new version replace it and re-execute
-          removed.push(currentHeadElt);
-        } else {
-          // this element already exists and should not be re-appended, so remove it from
-          // the new content map, preserving it in the DOM
-          srcToNewHeadNodes.delete(currentHeadElt.outerHTML);
-          preserved.push(currentHeadElt);
-        }
-      } else {
-        if (ctx.head.style === "append") {
-          // we are appending and this existing element is not new content
-          // so if and only if it is marked for re-append do we do anything
-          if (isReAppended) {
-            removed.push(currentHeadElt);
-            nodesToAppend.push(currentHeadElt);
-          }
-        } else {
-          // if this is a merge, we remove this content since it is not in the new head
-          if (ctx.head.shouldRemove(currentHeadElt) !== false) {
-            removed.push(currentHeadElt);
-          }
-        }
-      }
-    }
-
-    // Push the remaining new head elements in the Map into the
-    // nodes to append to the head tag
-    nodesToAppend.push(...srcToNewHeadNodes.values());
-
-    let promises = [];
-    for (const newNode of nodesToAppend) {
-      // TODO: This could theoretically be null, based on type
-      let newElt = /** @type {ChildNode} */ (
-        document.createRange().createContextualFragment(newNode.outerHTML)
-          .firstChild
-      );
-      if (ctx.callbacks.beforeNodeAdded(newElt) !== false) {
-        if (
-          ("href" in newElt && newElt.href) ||
-          ("src" in newElt && newElt.src)
-        ) {
-          /** @type {(result?: any) => void} */ let resolve;
-          let promise = new Promise(function (_resolve) {
-            resolve = _resolve;
-          });
-          newElt.addEventListener("load", function () {
-            resolve();
-          });
-          promises.push(promise);
-        }
-        oldHead.appendChild(newElt);
-        ctx.callbacks.afterNodeAdded(newElt);
-        added.push(newElt);
-      }
-    }
-
-    // remove all removed elements, after we have appended the new elements to avoid
-    // additional network requests for things like style sheets
-    for (const removedElement of removed) {
-      if (ctx.callbacks.beforeNodeRemoved(removedElement) !== false) {
-        oldHead.removeChild(removedElement);
-        ctx.callbacks.afterNodeRemoved(removedElement);
-      }
-    }
-
-    ctx.head.afterHeadMorphed(oldHead, {
-      added: added,
-      kept: preserved,
-      removed: removed,
-    });
-    return promises;
-  }
 
   //=============================================================================
   // Create Morph Context Functions
@@ -991,13 +733,10 @@ var Idiomorph = (function () {
         config: mergedConfig,
         morphStyle: morphStyle,
         ignoreActive: mergedConfig.ignoreActive,
-        ignoreActiveValue: mergedConfig.ignoreActiveValue,
-        restoreFocus: mergedConfig.restoreFocus,
         idMap: idMap,
         persistentIds: persistentIds,
         pantry: createPantry(),
         callbacks: mergedConfig.callbacks,
-        head: mergedConfig.head,
       };
     }
 
@@ -1019,9 +758,6 @@ var Idiomorph = (function () {
         defaults.callbacks,
         config.callbacks,
       );
-
-      // copy head config into final config  (do this to deep merge the head)
-      finalConfig.head = Object.assign({}, defaults.head, config.head);
 
       return finalConfig;
     }
