@@ -515,7 +515,7 @@ describe("Core morphing tests", function () {
       <div>
         <p>ignore me</p>
         <div>world</div>
-        <div>world</div>
+        
         <p>ignore me</p>
       </div>
     `.trim(),
