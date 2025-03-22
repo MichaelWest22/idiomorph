@@ -8,6 +8,24 @@
         return { morphStyle: "innerHTML" };
       } else if (swapStyle === ":attributes") {
         return { morphStyle: "attributes" };
+      } else if (swapStyle === ":removeAttributes") {
+        return {
+          morphStyle: "attributes",
+          callbacks: {
+            beforeAttributeUpdated: (attributeName, node, mutationType) => {
+              if (mutationType === "update") return false;
+            },
+          },
+        };
+      } else if (swapStyle === ":addAttributes") {
+        return {
+          morphStyle: "attributes",
+          callbacks: {
+            beforeAttributeUpdated: (attributeName, node, mutationType) => {
+              if (mutationType === "remove") return false;
+            },
+          },
+        };
       } else if (swapStyle.startsWith(":")) {
         return swapStyle.slice(1);
       }

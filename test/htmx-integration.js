@@ -250,4 +250,37 @@ describe("Tests for the htmx integration", function () {
     div.classList.contains("bar").should.equal(true);
     div.innerHTML.should.equal("Foo");
   });
+
+  it("morph removeAttributes correctly", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' hx-swap='morph:removeAttributes' hx-get='/test2' class='bar'>Bar</button>",
+    );
+    let initialBtn = makeForHtmxTest(
+      "<button id='b1' hx-swap='morph:removeAttributes' hx-get='/test' remove='me'>Foo</button>",
+    );
+    initialBtn.click();
+    this.server.respond();
+    initialBtn.classList.contains("bar").should.equal(false);
+    initialBtn.outerHTML.should.equal(
+      '<button id="b1" hx-swap="morph:removeAttributes" hx-get="/test" class="">Foo</button>',
+    );
+  });
+
+  it("morph addAttributes correctly", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' hx-swap='morph:addAttributes' hx-get='/test2' add='me'>Bar</button>",
+    );
+    let initialBtn = makeForHtmxTest(
+      "<button id='b1' hx-swap='morph:addAttributes' hx-get='/test' leave='me'>Foo</button>",
+    );
+    initialBtn.click();
+    this.server.respond();
+    initialBtn.outerHTML.should.equal(
+      '<button id="b1" hx-swap="morph:addAttributes" hx-get="/test2" leave="me" class="" add="me">Foo</button>',
+    );
+  });
 });
