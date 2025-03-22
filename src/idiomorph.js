@@ -763,7 +763,7 @@ var Idiomorph = (function () {
      * @returns {boolean}
      */
     function nodeEventCallback(node, name, cancelable, callback) {
-      const eventResponse = document.dispatchEvent(
+      const eventResponse = document.body.dispatchEvent(
         new CustomEvent(name, {
           cancelable,
           detail: { node },
@@ -782,7 +782,7 @@ var Idiomorph = (function () {
      * @returns {boolean}
      */
     function morphEventCallback(oldNode, newNode, name, cancelable, callback) {
-      const eventResponse = document.dispatchEvent(
+      const eventResponse = document.body.dispatchEvent(
         new CustomEvent(name, {
           cancelable,
           detail: { oldNode, newNode },
@@ -809,7 +809,7 @@ var Idiomorph = (function () {
       cancelable,
       callback,
     ) {
-      const eventResponse = document.dispatchEvent(
+      const eventResponse = document.body.dispatchEvent(
         new CustomEvent(name, {
           cancelable,
           detail: { attributeName, node, mutationType },
