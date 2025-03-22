@@ -15,6 +15,7 @@
  *
  * @property {'outerHTML' | 'innerHTML'} [morphStyle]
  * @property {boolean} [ignoreActive]
+ * @property {string} [eventCallbacks]
  * @property {ConfigCallbacks} [callbacks]
  */
 
@@ -41,6 +42,7 @@
  *
  * @property {'outerHTML' | 'innerHTML'} morphStyle
  * @property {boolean} [ignoreActive]
+ * @property {string} [eventCallbacks]
  * @property {ConfigCallbacksInternal} callbacks
 
  */
@@ -66,7 +68,7 @@
  * @type {{defaults: ConfigInternal, morph: Morph}}
  */
 var Idiomorph = (function () {
-  "use strict";
+  ("use strict");
 
   /**
    * @typedef {object} MorphContext
@@ -86,30 +88,12 @@ var Idiomorph = (function () {
   // AND NOW IT BEGINS...
   //=============================================================================
 
-  const noOp = () => {};
-  /**
-   * Default configuration values, updatable by users now
-   * @type {ConfigInternal}
-   */
-  const defaults = {
-    morphStyle: "outerHTML",
-    callbacks: {
-      beforeNodeAdded: noOp,
-      afterNodeAdded: noOp,
-      beforeNodeMorphed: noOp,
-      afterNodeMorphed: noOp,
-      beforeNodeRemoved: noOp,
-      afterNodeRemoved: noOp,
-      beforeAttributeUpdated: noOp,
-    },
-  };
-
   /**
    * Core idiomorph function for morphing one DOM tree to another
    *
    * @param {Element | Document} oldNode
    * @param {Element | Node | HTMLCollection | Node[] | string | null} newContent
-   * @param {Config} [config]
+   * @param {Config|string} [config]
    * @returns {Promise<Node[]> | Node[]}
    */
   function morph(oldNode, newContent, config = {}) {
@@ -741,12 +725,12 @@ var Idiomorph = (function () {
   //=============================================================================
   // Create Morph Context Functions
   //=============================================================================
-  const createMorphContext = (function () {
+  const { createMorphContext, createDefaults, addConfig } = (function () {
     /**
      *
      * @param {Element} oldNode
      * @param {Element} newContent
-     * @param {Config} config
+     * @param {Config|string} config
      * @returns {MorphContext}
      */
     function createMorphContext(oldNode, newContent, config) {
@@ -772,25 +756,193 @@ var Idiomorph = (function () {
     }
 
     /**
+     * @param {Node} node
+     * @param {string} name
+     * @param {boolean} cancelable
+     * @param {function} callback
+     * @returns {boolean}
+     */
+    function nodeEventCallback(node, name, cancelable, callback) {
+      const eventResponse = document.dispatchEvent(
+        new CustomEvent(name, {
+          cancelable,
+          detail: { node },
+        }),
+      );
+      const callbackResponse = callback(node);
+      return eventResponse && callbackResponse;
+    }
+
+    /**
+     * @param {Node} oldNode
+     * @param {Node} newNode
+     * @param {string} name
+     * @param {boolean} cancelable
+     * @param {function} callback
+     * @returns {boolean}
+     */
+    function morphEventCallback(oldNode, newNode, name, cancelable, callback) {
+      const eventResponse = document.dispatchEvent(
+        new CustomEvent(name, {
+          cancelable,
+          detail: { oldNode, newNode },
+        }),
+      );
+      const callbackResponse = callback(oldNode, newNode);
+      return eventResponse && callbackResponse;
+    }
+
+    /**
+     * @param {string} attributeName
+     * @param {Element} node
+     * @param {string} mutationType
+     * @param {string} name
+     * @param {boolean} cancelable
+     * @param {function} callback
+     * @returns {boolean}
+     */
+    function attributeEventCallback(
+      attributeName,
+      node,
+      mutationType,
+      name,
+      cancelable,
+      callback,
+    ) {
+      const eventResponse = document.dispatchEvent(
+        new CustomEvent(name, {
+          cancelable,
+          detail: { attributeName, node, mutationType },
+        }),
+      );
+      const callbackResponse = callback(attributeName, node, mutationType);
+      return eventResponse && callbackResponse;
+    }
+
+    const noOp = () => {};
+
+    /** @type {Map<string, Config>} */
+    let configs = new Map();
+
+    /**
+     * @returns {ConfigInternal}
+     */
+    function createDefaults() {
+      /** @type ConfigInternal */
+      let initialDefaults = {
+        morphStyle: "outerHTML",
+        callbacks: {
+          beforeNodeAdded: noOp,
+          afterNodeAdded: noOp,
+          beforeNodeMorphed: noOp,
+          afterNodeMorphed: noOp,
+          beforeNodeRemoved: noOp,
+          afterNodeRemoved: noOp,
+          beforeAttributeUpdated: noOp,
+        },
+        eventCallbacks: "", //"beforeNodeAdded,afterNodeAdded,beforeNodeMorphed,afterNodeMorphed,beforeNodeRemoved,afterNodeRemoved,beforeAttributeUpdated",
+      };
+
+      /** @type HTMLMetaElement|null */
+      const configMeta = document.querySelector(
+        'meta[name="idiomorph-config"]',
+      );
+      if (configMeta) {
+        const configs = JSON.parse(configMeta.content);
+        for (const name in configs) {
+          if (name == "defaults") {
+            initialDefaults = mergeConfig(initialDefaults, configs[name]);
+          } else {
+            addConfig(name, configs[name]);
+          }
+        }
+      }
+      return initialDefaults;
+    }
+
+    /**
      * Deep merges the config object and the Idiomorph.defaults object to
      * produce a final configuration object
-     * @param {Config} config
+     * @param {Config|string} config
      * @returns {ConfigInternal}
      */
     function mergeDefaults(config) {
-      let finalConfig = Object.assign({}, defaults);
-
-      // copy top level stuff into final config
-      Object.assign(finalConfig, config);
-
-      // copy callbacks into final config (do this to deep merge the callbacks)
-      finalConfig.callbacks = Object.assign(
-        {},
-        defaults.callbacks,
-        config.callbacks,
-      );
-
+      let finalConfig = defaults;
+      if (typeof config == "string") {
+        for (const configStr of config.split(",")) {
+          const configVal = configs.get(configStr);
+          if (configVal) {
+            finalConfig = mergeConfig(finalConfig, configVal);
+          }
+        }
+      } else {
+        finalConfig = mergeConfig(finalConfig, config);
+      }
+      // @ts-ignore eventCallbacks will always be a string from defaults
+      for (const event of finalConfig.eventCallbacks.split(",")) {
+        // @ts-ignore safe to lookup event name as we check it is defined before using it
+        const callback = finalConfig.callbacks[event];
+        if (callback) {
+          const cancelable = event.indexOf("before") === 0;
+          const eventName =
+            "im-" + event.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+          if (event.indexOf("Morphed") !== -1) {
+            // @ts-ignore
+            finalConfig.callbacks[event] = (oldNode, newNode) => {
+              return morphEventCallback(
+                oldNode,
+                newNode,
+                eventName,
+                cancelable,
+                callback,
+              );
+            };
+          } else if (event.indexOf("Updated") !== -1) {
+            // @ts-ignore
+            finalConfig.callbacks[event] = (attributeName, node, mutType) => {
+              return attributeEventCallback(
+                attributeName,
+                node,
+                mutType,
+                eventName,
+                cancelable,
+                callback,
+              );
+            };
+          } else {
+            // @ts-ignore
+            finalConfig.callbacks[event] = (node) => {
+              return nodeEventCallback(node, eventName, cancelable, callback);
+            };
+          }
+        }
+      }
       return finalConfig;
+    }
+
+    /**
+     * @param {ConfigInternal} defaults
+     * @param {Config} config
+     * @returns {ConfigInternal}
+     */
+    function mergeConfig(defaults, config) {
+      let finalConfig = { ...defaults };
+      // @ts-ignore copy top level stuff into final config ignoring trivial type differences
+      finalConfig = { ...finalConfig, ...config };
+      finalConfig.callbacks = { ...defaults.callbacks, ...config.callbacks };
+      return finalConfig;
+    }
+
+    /**
+     * Add a saved config
+     * @param {string} name
+     * @param {Config} config
+     * @returns {void}
+     */
+    function addConfig(name, config) {
+      // @ts-ignore we can delete this property
+      delete configs.name;
+      configs.set(name, config);
     }
 
     /**
@@ -914,7 +1066,7 @@ var Idiomorph = (function () {
       return persistentIds;
     }
 
-    return createMorphContext;
+    return { createMorphContext, createDefaults, addConfig };
   })();
 
   //=============================================================================
@@ -1019,11 +1171,14 @@ var Idiomorph = (function () {
     return { normalizeElement, normalizeParent };
   })();
 
+  const defaults = createDefaults();
+
   //=============================================================================
   // This is what ends up becoming the Idiomorph global object
   //=============================================================================
   return {
     morph,
     defaults,
+    addConfig,
   };
 })();

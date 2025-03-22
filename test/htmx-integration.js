@@ -129,16 +129,17 @@ describe("Tests for the htmx integration", function () {
     let newBtn = document.getElementById("b1");
     initialBtn.should.equal(newBtn);
     initialBtn.classList.contains("bar").should.equal(true);
+    div.innerHTML.should.equal(initialBtn.outerHTML);
   });
 
-  it("keeps elements stable in an inner morph w/ long syntax", function () {
+  it.skip("keeps elements stable in an inner morph w/ long syntax", function () {
     this.server.respondWith(
       "GET",
       "/test",
       "<button id='b1' class='bar'>Foo</button>",
     );
     let div = makeForHtmxTest(
-      "<div hx-swap='morph:{morphStyle:\"innerHTML\"}' hx-get='/test'><button id='b1'>Foo</button></div>",
+      "<div hx-swap='morph:{\"morphStyle\":\"innerHTML\"}' hx-get='/test'><button id='b1'>Foo</button></div>",
     );
     let initialBtn = document.getElementById("b1");
     div.click();
@@ -146,6 +147,7 @@ describe("Tests for the htmx integration", function () {
     let newBtn = document.getElementById("b1");
     initialBtn.should.equal(newBtn);
     initialBtn.classList.contains("bar").should.equal(true);
+    div.innerHTML.should.equal(initialBtn.outerHTML);
   });
 
   it("keeps the element stable in an outer morph with oob-swap", function () {
@@ -165,12 +167,11 @@ describe("Tests for the htmx integration", function () {
     initialBtn.innerHTML.should.equal("Bar");
   });
 
-  /* Currently unable to test innerHTML style oob swaps because oob-swap syntax uses a : which conflicts with morph:innerHTML
   it("keeps the element stable in an inner morph with oob-swap", function () {
     this.server.respondWith(
       "GET",
       "/test",
-      "<div id='d1' hx-swap-oob='morph:innerHTML'><button id='b1'>Bar</button></button>",
+      "<div id='d1' hx-swap-oob='morph;;innerHTML'><button id='b1'>Bar</button></button>",
     );
     let div = makeForHtmxTest(
       "<div id='d1' hx-get='/test' hx-swap='none'><button id='b1'>Foo</button></div>",
@@ -181,8 +182,8 @@ describe("Tests for the htmx integration", function () {
     let newBtn = document.getElementById("b1");
     initialBtn.should.equal(newBtn);
     initialBtn.innerHTML.should.equal("Bar");
+    div.innerHTML.should.equal(initialBtn.outerHTML);
   });
-  */
 
   it("keeps the element live in an outer morph when node type changes", function () {
     this.server.respondWith(

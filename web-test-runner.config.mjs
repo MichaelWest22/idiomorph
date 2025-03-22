@@ -11,6 +11,9 @@ let config = {
     <!DOCTYPE html>
     <html>
     <head>
+      
+      
+      <meta name="idiomorph-config" content='{"defaults":{"test": true},"inner":{"morphStyle": "innerHTML"}}' />
       <script src="/node_modules/chai/chai.js"></script>
       <script src="/node_modules/chai-dom/chai-dom.js"></script>
       <script>should = chai.should();</script>
