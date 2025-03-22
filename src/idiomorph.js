@@ -13,7 +13,7 @@
 /**
  * @typedef {object} Config
  *
- * @property {'outerHTML' | 'innerHTML'} [morphStyle]
+ * @property {'outerHTML' | 'innerHTML' | 'attributes'} [morphStyle]
  * @property {boolean} [ignoreActive]
  * @property {string} [eventCallbacks]
  * @property {ConfigCallbacks} [callbacks]
@@ -40,7 +40,7 @@
 /**
  * @typedef {object} ConfigInternal
  *
- * @property {'outerHTML' | 'innerHTML'} morphStyle
+ * @property {'outerHTML' | 'innerHTML' | 'attributes'} morphStyle
  * @property {boolean} [ignoreActive]
  * @property {string} [eventCallbacks]
  * @property {ConfigCallbacksInternal} callbacks
@@ -105,6 +105,10 @@ var Idiomorph = (function () {
       morphChildren(ctx, oldNode, newNode);
       ctx.pantry.remove();
       return Array.from(oldNode.childNodes);
+    } else if (ctx.morphStyle == "attributes") {
+      if (newNode.firstChild) morphAttributes(oldNode, newNode.firstChild, ctx);
+      ctx.pantry.remove();
+      return [oldNode];
     } else {
       return morphOuterHTML(ctx, oldNode, newNode);
     }
@@ -528,7 +532,7 @@ var Idiomorph = (function () {
   //=============================================================================
   // Single Node Morphing Code
   //=============================================================================
-  const morphNode = (function () {
+  const { morphNode, morphAttributes } = (function () {
     /**
      * @param {Node} oldNode root node to merge content into
      * @param {Node} newContent new content to merge
@@ -719,7 +723,7 @@ var Idiomorph = (function () {
       );
     }
 
-    return morphNode;
+    return { morphNode, morphAttributes };
   })();
 
   //=============================================================================
@@ -738,7 +742,7 @@ var Idiomorph = (function () {
 
       const mergedConfig = mergeDefaults(config);
       const morphStyle = mergedConfig.morphStyle || "outerHTML";
-      if (!["innerHTML", "outerHTML"].includes(morphStyle)) {
+      if (!["innerHTML", "outerHTML", "attributes"].includes(morphStyle)) {
         throw `Do not understand how to morph style ${morphStyle}`;
       }
 

@@ -573,4 +573,13 @@ describe("Core morphing tests", function () {
     d1.innerText.should.equal("Bar");
     i1.value.should.equal("asdf");
   });
+
+  it("morphs attributes only", function () {
+    let initial = make("<button a='foo' b='bar' c='jim'>Foo</button>");
+    let finalSrc = '<button b="bar" c="jack" d="jack">Bar</button>';
+    Idiomorph.morph(initial, finalSrc, { morphStyle: "attributes" });
+    initial.outerHTML.should.equal(
+      '<button b="bar" c="jack" d="jack">Foo</button>',
+    );
+  });
 });
