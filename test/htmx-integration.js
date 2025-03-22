@@ -132,15 +132,16 @@ describe("Tests for the htmx integration", function () {
     div.innerHTML.should.equal(initialBtn.outerHTML);
   });
 
-  it.skip("keeps elements stable in an inner morph w/ long syntax", function () {
+  it("keeps elements stable in an inner morph w/ inner addConfig", function () {
     this.server.respondWith(
       "GET",
       "/test",
       "<button id='b1' class='bar'>Foo</button>",
     );
     let div = makeForHtmxTest(
-      "<div hx-swap='morph:{\"morphStyle\":\"innerHTML\"}' hx-get='/test'><button id='b1'>Foo</button></div>",
+      "<div hx-swap='morph:inner' hx-get='/test'><button id='b1'>Foo</button></div>",
     );
+    Idiomorph.addConfig("inner", { morphStyle: "innerHTML" });
     let initialBtn = document.getElementById("b1");
     div.click();
     this.server.respond();
@@ -171,7 +172,7 @@ describe("Tests for the htmx integration", function () {
     this.server.respondWith(
       "GET",
       "/test",
-      "<div id='d1' hx-swap-oob='morph;;innerHTML'><button id='b1'>Bar</button></button>",
+      "<div id='d1' hx-swap-oob='morph;innerHTML'><button id='b1'>Bar</button></div>",
     );
     let div = makeForHtmxTest(
       "<div id='d1' hx-get='/test' hx-swap='none'><button id='b1'>Foo</button></div>",
@@ -182,7 +183,9 @@ describe("Tests for the htmx integration", function () {
     let newBtn = document.getElementById("b1");
     initialBtn.should.equal(newBtn);
     initialBtn.innerHTML.should.equal("Bar");
-    div.innerHTML.should.equal(initialBtn.outerHTML);
+    div.outerHTML.should.equal(
+      '<div id="d1" hx-get="/test" hx-swap="none" class=""><button id="b1">Bar</button></div>',
+    );
   });
 
   it("keeps the element live in an outer morph when node type changes", function () {
@@ -212,5 +215,39 @@ describe("Tests for the htmx integration", function () {
     let newBtn = document.getElementById("b1");
     newBtn.classList.contains("bar").should.equal(false);
     newBtn.classList.contains("doh").should.equal(true);
+  });
+
+  it("morph attributes correctly", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' hx-swap='morph:attributes' hx-get='/test' class='bar'>Bar</button>",
+    );
+    let initialBtn = makeForHtmxTest(
+      "<button id='b1' hx-swap='morph:attributes' hx-get='/test'>Foo</button>",
+    );
+    initialBtn.click();
+    this.server.respond();
+    let newBtn = document.getElementById("b1");
+    initialBtn.should.equal(newBtn);
+    initialBtn.classList.contains("bar").should.equal(true);
+    initialBtn.outerHTML.should.equal(
+      '<button id="b1" hx-swap="morph:attributes" hx-get="/test" class="bar">Foo</button>',
+    );
+  });
+
+  it("morph attributes correctly with oob-swap", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<div id='d1' hx-swap-oob='morph;attributes' class='bar'>Bar</div>",
+    );
+    let div = makeForHtmxTest(
+      "<div id='d1' hx-get='/test' hx-swap='none'>Foo</div>",
+    );
+    div.click();
+    this.server.respond();
+    div.classList.contains("bar").should.equal(true);
+    div.innerHTML.should.equal("Foo");
   });
 });

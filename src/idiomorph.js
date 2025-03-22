@@ -729,349 +729,357 @@ var Idiomorph = (function () {
   //=============================================================================
   // Create Morph Context Functions
   //=============================================================================
-  const { createMorphContext, createDefaults, addConfig } = (function () {
-    /**
-     *
-     * @param {Element} oldNode
-     * @param {Element} newContent
-     * @param {Config|string} config
-     * @returns {MorphContext}
-     */
-    function createMorphContext(oldNode, newContent, config) {
-      const { persistentIds, idMap } = createIdMaps(oldNode, newContent);
+  const { createMorphContext, createDefaults, addConfig, getConfig } =
+    (function () {
+      /**
+       *
+       * @param {Element} oldNode
+       * @param {Element} newContent
+       * @param {Config|string} config
+       * @returns {MorphContext}
+       */
+      function createMorphContext(oldNode, newContent, config) {
+        const { persistentIds, idMap } = createIdMaps(oldNode, newContent);
 
-      const mergedConfig = mergeDefaults(config);
-      const morphStyle = mergedConfig.morphStyle || "outerHTML";
-      if (!["innerHTML", "outerHTML", "attributes"].includes(morphStyle)) {
-        throw `Do not understand how to morph style ${morphStyle}`;
-      }
-
-      return {
-        target: oldNode,
-        newContent: newContent,
-        config: mergedConfig,
-        morphStyle: morphStyle,
-        ignoreActive: mergedConfig.ignoreActive,
-        idMap: idMap,
-        persistentIds: persistentIds,
-        pantry: createPantry(),
-        callbacks: mergedConfig.callbacks,
-      };
-    }
-
-    /**
-     * @param {Node} node
-     * @param {string} name
-     * @param {boolean} cancelable
-     * @param {function} callback
-     * @returns {boolean}
-     */
-    function nodeEventCallback(node, name, cancelable, callback) {
-      const eventResponse = document.body.dispatchEvent(
-        new CustomEvent(name, {
-          cancelable,
-          detail: { node },
-        }),
-      );
-      const callbackResponse = callback(node);
-      return eventResponse && callbackResponse;
-    }
-
-    /**
-     * @param {Node} oldNode
-     * @param {Node} newNode
-     * @param {string} name
-     * @param {boolean} cancelable
-     * @param {function} callback
-     * @returns {boolean}
-     */
-    function morphEventCallback(oldNode, newNode, name, cancelable, callback) {
-      const eventResponse = document.body.dispatchEvent(
-        new CustomEvent(name, {
-          cancelable,
-          detail: { oldNode, newNode },
-        }),
-      );
-      const callbackResponse = callback(oldNode, newNode);
-      return eventResponse && callbackResponse;
-    }
-
-    /**
-     * @param {string} attributeName
-     * @param {Element} node
-     * @param {string} mutationType
-     * @param {string} name
-     * @param {boolean} cancelable
-     * @param {function} callback
-     * @returns {boolean}
-     */
-    function attributeEventCallback(
-      attributeName,
-      node,
-      mutationType,
-      name,
-      cancelable,
-      callback,
-    ) {
-      const eventResponse = document.body.dispatchEvent(
-        new CustomEvent(name, {
-          cancelable,
-          detail: { attributeName, node, mutationType },
-        }),
-      );
-      const callbackResponse = callback(attributeName, node, mutationType);
-      return eventResponse && callbackResponse;
-    }
-
-    const noOp = () => {};
-
-    /** @type {Map<string, Config>} */
-    let configs = new Map();
-
-    /**
-     * @returns {ConfigInternal}
-     */
-    function createDefaults() {
-      /** @type ConfigInternal */
-      let initialDefaults = {
-        morphStyle: "outerHTML",
-        callbacks: {
-          beforeNodeAdded: noOp,
-          afterNodeAdded: noOp,
-          beforeNodeMorphed: noOp,
-          afterNodeMorphed: noOp,
-          beforeNodeRemoved: noOp,
-          afterNodeRemoved: noOp,
-          beforeAttributeUpdated: noOp,
-        },
-        eventCallbacks: "", //"beforeNodeAdded,afterNodeAdded,beforeNodeMorphed,afterNodeMorphed,beforeNodeRemoved,afterNodeRemoved,beforeAttributeUpdated",
-      };
-
-      /** @type HTMLMetaElement|null */
-      const configMeta = document.querySelector(
-        'meta[name="idiomorph-config"]',
-      );
-      if (configMeta) {
-        const configs = JSON.parse(configMeta.content);
-        for (const name in configs) {
-          if (name == "defaults") {
-            initialDefaults = mergeConfig(initialDefaults, configs[name]);
-          } else {
-            addConfig(name, configs[name]);
-          }
+        const mergedConfig = getConfig(config);
+        const morphStyle = mergedConfig.morphStyle || "outerHTML";
+        if (!["innerHTML", "outerHTML", "attributes"].includes(morphStyle)) {
+          throw `Do not understand how to morph style ${morphStyle}`;
         }
+
+        return {
+          target: oldNode,
+          newContent: newContent,
+          config: mergedConfig,
+          morphStyle: morphStyle,
+          ignoreActive: mergedConfig.ignoreActive,
+          idMap: idMap,
+          persistentIds: persistentIds,
+          pantry: createPantry(),
+          callbacks: mergedConfig.callbacks,
+        };
       }
-      return initialDefaults;
-    }
 
-    /**
-     * Deep merges the config object and the Idiomorph.defaults object to
-     * produce a final configuration object
-     * @param {Config|string} config
-     * @returns {ConfigInternal}
-     */
-    function mergeDefaults(config) {
-      let finalConfig = defaults;
-      if (typeof config == "string") {
-        for (const configStr of config.split(",")) {
-          const configVal = configs.get(configStr);
-          if (configVal) {
-            finalConfig = mergeConfig(finalConfig, configVal);
-          }
-        }
-      } else {
-        finalConfig = mergeConfig(finalConfig, config);
+      /**
+       * @param {Node} node
+       * @param {string} name
+       * @param {boolean} cancelable
+       * @param {function} callback
+       * @returns {boolean}
+       */
+      function nodeEventCallback(node, name, cancelable, callback) {
+        const eventResponse = document.body.dispatchEvent(
+          new CustomEvent(name, {
+            cancelable,
+            detail: { node },
+          }),
+        );
+        const callbackResponse = callback(node);
+        return eventResponse && callbackResponse;
       }
-      // @ts-ignore eventCallbacks will always be a string from defaults
-      for (const event of finalConfig.eventCallbacks.split(",")) {
-        // @ts-ignore safe to lookup event name as we check it is defined before using it
-        const callback = finalConfig.callbacks[event];
-        if (callback) {
-          const cancelable = event.indexOf("before") === 0;
-          const eventName =
-            "im-" + event.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-          if (event.indexOf("Morphed") !== -1) {
-            // @ts-ignore
-            finalConfig.callbacks[event] = (oldNode, newNode) => {
-              return morphEventCallback(
-                oldNode,
-                newNode,
-                eventName,
-                cancelable,
-                callback,
-              );
-            };
-          } else if (event.indexOf("Updated") !== -1) {
-            // @ts-ignore
-            finalConfig.callbacks[event] = (attributeName, node, mutType) => {
-              return attributeEventCallback(
-                attributeName,
-                node,
-                mutType,
-                eventName,
-                cancelable,
-                callback,
-              );
-            };
-          } else {
-            // @ts-ignore
-            finalConfig.callbacks[event] = (node) => {
-              return nodeEventCallback(node, eventName, cancelable, callback);
-            };
-          }
-        }
+
+      /**
+       * @param {Node} oldNode
+       * @param {Node} newNode
+       * @param {string} name
+       * @param {boolean} cancelable
+       * @param {function} callback
+       * @returns {boolean}
+       */
+      function morphEventCallback(
+        oldNode,
+        newNode,
+        name,
+        cancelable,
+        callback,
+      ) {
+        const eventResponse = document.body.dispatchEvent(
+          new CustomEvent(name, {
+            cancelable,
+            detail: { oldNode, newNode },
+          }),
+        );
+        const callbackResponse = callback(oldNode, newNode);
+        return eventResponse && callbackResponse;
       }
-      return finalConfig;
-    }
 
-    /**
-     * @param {ConfigInternal} defaults
-     * @param {Config} config
-     * @returns {ConfigInternal}
-     */
-    function mergeConfig(defaults, config) {
-      let finalConfig = { ...defaults };
-      // @ts-ignore copy top level stuff into final config ignoring trivial type differences
-      finalConfig = { ...finalConfig, ...config };
-      finalConfig.callbacks = { ...defaults.callbacks, ...config.callbacks };
-      return finalConfig;
-    }
-
-    /**
-     * Add a saved config
-     * @param {string} name
-     * @param {Config} config
-     * @returns {void}
-     */
-    function addConfig(name, config) {
-      // @ts-ignore we can delete this property
-      delete configs.name;
-      configs.set(name, config);
-    }
-
-    /**
-     * @returns {HTMLDivElement}
-     */
-    function createPantry() {
-      const pantry = document.createElement("div");
-      pantry.hidden = true;
-      document.body.insertAdjacentElement("afterend", pantry);
-      return pantry;
-    }
-
-    /**
-     * Returns all elements with an ID contained within the root element and its descendants
-     *
-     * @param {Element} root
-     * @returns {Element[]}
-     */
-    function findIdElements(root) {
-      let elements = Array.from(root.querySelectorAll("[id]"));
-      if (root.id) {
-        elements.push(root);
+      /**
+       * @param {string} attributeName
+       * @param {Element} node
+       * @param {string} mutationType
+       * @param {string} name
+       * @param {boolean} cancelable
+       * @param {function} callback
+       * @returns {boolean}
+       */
+      function attributeEventCallback(
+        attributeName,
+        node,
+        mutationType,
+        name,
+        cancelable,
+        callback,
+      ) {
+        const eventResponse = document.body.dispatchEvent(
+          new CustomEvent(name, {
+            cancelable,
+            detail: { attributeName, node, mutationType },
+          }),
+        );
+        const callbackResponse = callback(attributeName, node, mutationType);
+        return eventResponse && callbackResponse;
       }
-      return elements;
-    }
 
-    /**
-     * A bottom-up algorithm that populates a map of Element -> IdSet.
-     * The idSet for a given element is the set of all IDs contained within its subtree.
-     * As an optimzation, we filter these IDs through the given list of persistent IDs,
-     * because we don't need to bother considering IDed elements that won't be in the new content.
-     *
-     * @param {Map<Node, Set<string>>} idMap
-     * @param {Set<string>} persistentIds
-     * @param {Element|null} root
-     * @param {Element[]|NodeListOf<Element>} elements
-     */
-    function populateIdMapWithTree(idMap, persistentIds, root, elements) {
-      for (const elt of elements) {
-        if (persistentIds.has(elt.id)) {
-          /** @type {Element|null} */
-          let current = elt;
-          // walk up the parent hierarchy of that element, adding the id
-          // of element to the parent's id set
-          while (current && current !== root) {
-            let idSet = idMap.get(current);
-            // if the id set doesn't exist, create it and insert it in the map
-            if (idSet == null) {
-              idSet = new Set();
-              idMap.set(current, idSet);
+      const noOp = () => {};
+
+      /** @type {Map<string, Config>} */
+      let configs = new Map();
+
+      /**
+       * @returns {ConfigInternal}
+       */
+      function createDefaults() {
+        /** @type ConfigInternal */
+        let initialDefaults = {
+          morphStyle: "outerHTML",
+          callbacks: {
+            beforeNodeAdded: noOp,
+            afterNodeAdded: noOp,
+            beforeNodeMorphed: noOp,
+            afterNodeMorphed: noOp,
+            beforeNodeRemoved: noOp,
+            afterNodeRemoved: noOp,
+            beforeAttributeUpdated: noOp,
+          },
+          eventCallbacks: "", //"beforeNodeAdded,afterNodeAdded,beforeNodeMorphed,afterNodeMorphed,beforeNodeRemoved,afterNodeRemoved,beforeAttributeUpdated",
+        };
+
+        /** @type HTMLMetaElement|null */
+        const configMeta = document.querySelector(
+          'meta[name="idiomorph-config"]',
+        );
+        if (configMeta) {
+          const configs = JSON.parse(configMeta.content);
+          for (const name in configs) {
+            if (name == "defaults") {
+              initialDefaults = mergeConfig(initialDefaults, configs[name]);
+            } else {
+              addConfig(name, configs[name]);
             }
-            idSet.add(elt.id);
-            current = current.parentElement;
+          }
+        }
+        return initialDefaults;
+      }
+
+      /**
+       * Deep merges the config object and the Idiomorph.defaults object to
+       * produce a final configuration object
+       * @param {Config|string} config
+       * @returns {ConfigInternal}
+       */
+      function getConfig(config) {
+        let finalConfig = defaults;
+        if (typeof config == "string") {
+          for (const configStr of config.split(",")) {
+            const configVal = configs.get(configStr);
+            if (configVal) {
+              finalConfig = mergeConfig(finalConfig, configVal);
+            }
+          }
+        } else {
+          finalConfig = mergeConfig(finalConfig, config);
+        }
+        // @ts-ignore eventCallbacks will always be a string from defaults
+        for (const event of finalConfig.eventCallbacks.split(",")) {
+          // @ts-ignore safe to lookup event name as we check it is defined before using it
+          const callback = finalConfig.callbacks[event];
+          if (callback) {
+            const cancelable = event.indexOf("before") === 0;
+            const eventName =
+              "im-" +
+              event.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+            if (event.indexOf("Morphed") !== -1) {
+              // @ts-ignore
+              finalConfig.callbacks[event] = (oldNode, newNode) => {
+                return morphEventCallback(
+                  oldNode,
+                  newNode,
+                  eventName,
+                  cancelable,
+                  callback,
+                );
+              };
+            } else if (event.indexOf("Updated") !== -1) {
+              // @ts-ignore
+              finalConfig.callbacks[event] = (attributeName, node, mutType) => {
+                return attributeEventCallback(
+                  attributeName,
+                  node,
+                  mutType,
+                  eventName,
+                  cancelable,
+                  callback,
+                );
+              };
+            } else {
+              // @ts-ignore
+              finalConfig.callbacks[event] = (node) => {
+                return nodeEventCallback(node, eventName, cancelable, callback);
+              };
+            }
+          }
+        }
+        return finalConfig;
+      }
+
+      /**
+       * @param {ConfigInternal} defaults
+       * @param {Config} config
+       * @returns {ConfigInternal}
+       */
+      function mergeConfig(defaults, config) {
+        let finalConfig = { ...defaults };
+        // @ts-ignore copy top level stuff into final config ignoring trivial type differences
+        finalConfig = { ...finalConfig, ...config };
+        finalConfig.callbacks = { ...defaults.callbacks, ...config.callbacks };
+        return finalConfig;
+      }
+
+      /**
+       * Add a saved config
+       * @param {string} name
+       * @param {Config} config
+       * @returns {void}
+       */
+      function addConfig(name, config) {
+        // @ts-ignore we can delete this property
+        delete configs.name;
+        configs.set(name, config);
+      }
+
+      /**
+       * @returns {HTMLDivElement}
+       */
+      function createPantry() {
+        const pantry = document.createElement("div");
+        pantry.hidden = true;
+        document.body.insertAdjacentElement("afterend", pantry);
+        return pantry;
+      }
+
+      /**
+       * Returns all elements with an ID contained within the root element and its descendants
+       *
+       * @param {Element} root
+       * @returns {Element[]}
+       */
+      function findIdElements(root) {
+        let elements = Array.from(root.querySelectorAll("[id]"));
+        if (root.id) {
+          elements.push(root);
+        }
+        return elements;
+      }
+
+      /**
+       * A bottom-up algorithm that populates a map of Element -> IdSet.
+       * The idSet for a given element is the set of all IDs contained within its subtree.
+       * As an optimzation, we filter these IDs through the given list of persistent IDs,
+       * because we don't need to bother considering IDed elements that won't be in the new content.
+       *
+       * @param {Map<Node, Set<string>>} idMap
+       * @param {Set<string>} persistentIds
+       * @param {Element|null} root
+       * @param {Element[]|NodeListOf<Element>} elements
+       */
+      function populateIdMapWithTree(idMap, persistentIds, root, elements) {
+        for (const elt of elements) {
+          if (persistentIds.has(elt.id)) {
+            /** @type {Element|null} */
+            let current = elt;
+            // walk up the parent hierarchy of that element, adding the id
+            // of element to the parent's id set
+            while (current && current !== root) {
+              let idSet = idMap.get(current);
+              // if the id set doesn't exist, create it and insert it in the map
+              if (idSet == null) {
+                idSet = new Set();
+                idMap.set(current, idSet);
+              }
+              idSet.add(elt.id);
+              current = current.parentElement;
+            }
           }
         }
       }
-    }
 
-    /**
-     * This function computes a map of nodes to all ids contained within that node (inclusive of the
-     * node).  This map can be used to ask if two nodes have intersecting sets of ids, which allows
-     * for a looser definition of "matching" than tradition id matching, and allows child nodes
-     * to contribute to a parent nodes matching.
-     *
-     * @param {Element} oldNode  the old node that will be morphed
-     * @param {Element} newContent  the new content parentNode to morph to
-     * @returns {IdSets}
-     */
-    function createIdMaps(oldNode, newContent) {
-      const oldIdElements = findIdElements(oldNode);
-      const newIdElements = newContent.querySelectorAll("[id]");
+      /**
+       * This function computes a map of nodes to all ids contained within that node (inclusive of the
+       * node).  This map can be used to ask if two nodes have intersecting sets of ids, which allows
+       * for a looser definition of "matching" than tradition id matching, and allows child nodes
+       * to contribute to a parent nodes matching.
+       *
+       * @param {Element} oldNode  the old node that will be morphed
+       * @param {Element} newContent  the new content parentNode to morph to
+       * @returns {IdSets}
+       */
+      function createIdMaps(oldNode, newContent) {
+        const oldIdElements = findIdElements(oldNode);
+        const newIdElements = newContent.querySelectorAll("[id]");
 
-      const persistentIds = createPersistentIds(oldIdElements, newIdElements);
+        const persistentIds = createPersistentIds(oldIdElements, newIdElements);
 
-      /** @type {Map<Node, Set<string>>} */
-      let idMap = new Map();
-      populateIdMapWithTree(
-        idMap,
-        persistentIds,
-        oldNode.parentElement,
-        oldIdElements,
-      );
-      populateIdMapWithTree(idMap, persistentIds, newContent, newIdElements);
+        /** @type {Map<Node, Set<string>>} */
+        let idMap = new Map();
+        populateIdMapWithTree(
+          idMap,
+          persistentIds,
+          oldNode.parentElement,
+          oldIdElements,
+        );
+        populateIdMapWithTree(idMap, persistentIds, newContent, newIdElements);
 
-      return { persistentIds, idMap };
-    }
+        return { persistentIds, idMap };
+      }
 
-    /**
-     * This function computes the set of ids that persist between the two contents excluding duplicates
-     *
-     * @param {Element[]} oldIdElements
-     * @param {NodeListOf<Element>} newIdElements
-     * @returns {Set<string>}
-     */
-    function createPersistentIds(oldIdElements, newIdElements) {
-      let duplicateIds = new Set();
+      /**
+       * This function computes the set of ids that persist between the two contents excluding duplicates
+       *
+       * @param {Element[]} oldIdElements
+       * @param {NodeListOf<Element>} newIdElements
+       * @returns {Set<string>}
+       */
+      function createPersistentIds(oldIdElements, newIdElements) {
+        let duplicateIds = new Set();
 
-      /** @type {Map<string, string>} */
-      let oldIdTagNameMap = new Map();
-      for (const { id, tagName } of oldIdElements) {
-        if (oldIdTagNameMap.has(id)) {
-          duplicateIds.add(id);
-        } else {
-          oldIdTagNameMap.set(id, tagName);
+        /** @type {Map<string, string>} */
+        let oldIdTagNameMap = new Map();
+        for (const { id, tagName } of oldIdElements) {
+          if (oldIdTagNameMap.has(id)) {
+            duplicateIds.add(id);
+          } else {
+            oldIdTagNameMap.set(id, tagName);
+          }
         }
-      }
 
-      let persistentIds = new Set();
-      for (const { id, tagName } of newIdElements) {
-        if (persistentIds.has(id)) {
-          duplicateIds.add(id);
-        } else if (oldIdTagNameMap.get(id) === tagName) {
-          persistentIds.add(id);
+        let persistentIds = new Set();
+        for (const { id, tagName } of newIdElements) {
+          if (persistentIds.has(id)) {
+            duplicateIds.add(id);
+          } else if (oldIdTagNameMap.get(id) === tagName) {
+            persistentIds.add(id);
+          }
+          // skip if tag types mismatch because its not possible to morph one tag into another
         }
-        // skip if tag types mismatch because its not possible to morph one tag into another
+
+        for (const id of duplicateIds) {
+          persistentIds.delete(id);
+        }
+        return persistentIds;
       }
 
-      for (const id of duplicateIds) {
-        persistentIds.delete(id);
-      }
-      return persistentIds;
-    }
-
-    return { createMorphContext, createDefaults, addConfig };
-  })();
+      return { createMorphContext, createDefaults, addConfig, getConfig };
+    })();
 
   //=============================================================================
   // HTML Normalization Functions
@@ -1184,5 +1192,6 @@ var Idiomorph = (function () {
     morph,
     defaults,
     addConfig,
+    getConfig,
   };
 })();

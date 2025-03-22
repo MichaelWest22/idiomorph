@@ -6,6 +6,8 @@
         return { morphStyle: "outerHTML" };
       } else if (swapStyle === ":innerHTML") {
         return { morphStyle: "innerHTML" };
+      } else if (swapStyle === ":attributes") {
+        return { morphStyle: "attributes" };
       } else if (swapStyle.startsWith(":")) {
         return swapStyle.slice(1);
       }
@@ -15,7 +17,8 @@
   htmx.defineExtension("morph", {
     isInlineSwap: function (swapStyle) {
       let config = createMorphConfig(swapStyle);
-      return config?.morphStyle === "outerHTML" || config?.morphStyle == null;
+      config = Idiomorph.getConfig(config);
+      return config?.morphStyle !== "innerHTML";
     },
     handleSwap: function (swapStyle, target, fragment) {
       let config = createMorphConfig(swapStyle);
