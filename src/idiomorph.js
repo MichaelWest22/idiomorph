@@ -15,6 +15,7 @@
  *
  * @property {'outerHTML' | 'innerHTML' | 'attributes'} [morphStyle]
  * @property {boolean} [ignoreActive]
+ * @property {boolean} [syncInputValue]
  * @property {string} [eventCallbacks]
  * @property {ConfigCallbacks} [callbacks]
  */
@@ -42,6 +43,7 @@
  *
  * @property {'outerHTML' | 'innerHTML' | 'attributes'} morphStyle
  * @property {boolean} [ignoreActive]
+ * @property {boolean} [syncInputValue]
  * @property {string} [eventCallbacks]
  * @property {ConfigCallbacksInternal} callbacks
 
@@ -78,6 +80,7 @@ var Idiomorph = (function () {
    * @property {ConfigInternal} config
    * @property {ConfigInternal['morphStyle']} morphStyle
    * @property {ConfigInternal['ignoreActive']} ignoreActive
+   * @property {ConfigInternal['syncInputValue']} syncInputValue
    * @property {Map<Node, Set<string>>} idMap
    * @property {Set<string>} persistentIds
    * @property {ConfigInternal['callbacks']} callbacks
@@ -550,8 +553,11 @@ var Idiomorph = (function () {
       }
 
       morphAttributes(oldNode, newContent, ctx);
-      // @ts-ignore newContent can be a node here because .firstChild will be null
-      morphChildren(ctx, oldNode, newContent);
+      // @ts-ignore can treat as element as other cases have no children. Only morph children if different content
+      if (oldNode.innerHTML !== newContent.innerHTML) {
+        // @ts-ignore newContent can be a element here because .firstChild will be null
+        morphChildren(ctx, oldNode, newContent);
+      }
       ctx.callbacks.afterNodeMorphed(oldNode, newContent);
       return oldNode;
     }
@@ -599,7 +605,18 @@ var Idiomorph = (function () {
           }
         }
 
-        syncInputValue(oldElt, newElt, ctx);
+        if (ctx.syncInputValue) {
+          syncInputValue(oldElt, newElt, ctx);
+        } else if (
+          oldElt instanceof HTMLTextAreaElement &&
+          newElt instanceof HTMLTextAreaElement &&
+          oldElt.defaultValue != newElt.defaultValue
+        ) {
+          // handle updates to TextArea value
+          if (!ignoreAttribute("value", oldElt, "update", ctx)) {
+            oldElt.value = newElt.value;
+          }
+        }
       }
 
       // sync text nodes
@@ -662,12 +679,6 @@ var Idiomorph = (function () {
         }
         if (newValue !== oldValue) {
           oldElement.value = newValue;
-        }
-        if (
-          oldElement.firstChild &&
-          oldElement.firstChild.nodeValue !== newValue
-        ) {
-          oldElement.firstChild.nodeValue = newValue;
         }
       }
     }
@@ -753,6 +764,7 @@ var Idiomorph = (function () {
           config: mergedConfig,
           morphStyle: morphStyle,
           ignoreActive: mergedConfig.ignoreActive,
+          syncInputValue: mergedConfig.syncInputValue,
           idMap: idMap,
           persistentIds: persistentIds,
           pantry: createPantry(),
