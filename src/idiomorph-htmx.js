@@ -2,30 +2,8 @@
   function createMorphConfig(swapStyle) {
     if (swapStyle.startsWith("morph")) {
       swapStyle = swapStyle.replaceAll(";", ":").slice(5);
-      if (swapStyle === "" || swapStyle === ":outerHTML") {
+      if (swapStyle === "") {
         return { morphStyle: "outerHTML" };
-      } else if (swapStyle === ":innerHTML") {
-        return { morphStyle: "innerHTML" };
-      } else if (swapStyle === ":attributes") {
-        return { morphStyle: "attributes" };
-      } else if (swapStyle === ":removeAttributes") {
-        return {
-          morphStyle: "attributes",
-          callbacks: {
-            beforeAttributeUpdated: (attributeName, node, mutationType) => {
-              if (mutationType === "update") return false;
-            },
-          },
-        };
-      } else if (swapStyle === ":addAttributes") {
-        return {
-          morphStyle: "attributes",
-          callbacks: {
-            beforeAttributeUpdated: (attributeName, node, mutationType) => {
-              if (mutationType === "remove") return false;
-            },
-          },
-        };
       } else if (swapStyle.startsWith(":")) {
         return swapStyle.slice(1);
       }
@@ -43,6 +21,28 @@
       if (config) {
         return Idiomorph.morph(target, fragment.children, config);
       }
+    },
+  });
+
+  Idiomorph.addConfig("outerHTML", { morphStyle: "outerHTML" });
+  Idiomorph.addConfig("innerHTML", { morphStyle: "innerHTML" });
+  Idiomorph.addConfig("ignoreActive", { ignoreActive: true });
+  Idiomorph.addConfig("syncInputValue", { syncInputValue: true });
+  Idiomorph.addConfig("attributes", { morphStyle: "attributes" });
+  Idiomorph.addConfig("removeAttributes", {
+    morphStyle: "attributes",
+    callbacks: {
+      beforeAttributeUpdated: (attributeName, node, mutationType) => {
+        if (mutationType === "update") return false;
+      },
+    },
+  });
+  Idiomorph.addConfig("addAttributes", {
+    morphStyle: "attributes",
+    callbacks: {
+      beforeAttributeUpdated: (attributeName, node, mutationType) => {
+        if (mutationType === "remove") return false;
+      },
     },
   });
 })();
