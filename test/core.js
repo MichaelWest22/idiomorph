@@ -363,6 +363,14 @@ describe("Core morphing tests", function () {
     initial.value.should.equal("foo");
   });
 
+  it("can morph textarea and updates if changing value", function () {
+    let initial = make("<textarea>foo</textarea>");
+    let final = make("<textarea>foo2</textarea>");
+    initial.value = "bar";
+    Idiomorph.morph(initial, final);
+    initial.value.should.equal("foo2");
+  });
+
   it("can morph input checked properly, remove checked", function () {
     let parent = make('<div><input type="checkbox" checked></div>');
     document.body.append(parent);
