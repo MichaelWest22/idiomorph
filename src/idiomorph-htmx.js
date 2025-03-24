@@ -7,10 +7,18 @@
       } else if (swapStyle.startsWith(":")) {
         return swapStyle.slice(1);
       }
+    } else if (
+      htmx.config.morphByDefault !== false &&
+      swapStyle == "innerHTML"
+    ) {
+      return { morphStyle: "innerHTML" };
     }
   }
-
+  let api;
   htmx.defineExtension("morph", {
+    init: function (apiRef) {
+      api = apiRef;
+    },
     isInlineSwap: function (swapStyle) {
       let config = createMorphConfig(swapStyle);
       config = Idiomorph.getConfig(config);
@@ -20,6 +28,24 @@
       let config = createMorphConfig(swapStyle);
       if (config) {
         return Idiomorph.morph(target, fragment.children, config);
+      }
+    },
+    transformResponse: function (text, xhr, elt) {
+      if (htmx.config.morphByDefault === false) return text;
+      return text
+        .replace(/hx-swap-oob="(true|outerHTML)/gi, 'hx-swap-oob="morph')
+        .replace(/hx-swap-oob='(true|outerHTML)/gi, "hx-swap-oob='morph");
+    },
+    onEvent: function (name, evt) {
+      if (htmx.config.morphByDefault !== false && name === "htmx:beforeSwap") {
+        if (htmx.config.defaultSwapStyle === "outerHTML")
+          htmx.config.defaultSwapStyle = "morph";
+        let swapStyle =
+          evt.detail.swapOverride ||
+          api.getClosestAttributeValue(evt.detail.elt, "hx-swap");
+        if (swapStyle && swapStyle.startsWith("outerHTML")) {
+          evt.detail.swapOverride = swapStyle.replace(/outerHTML/, "morph");
+        }
       }
     },
   });

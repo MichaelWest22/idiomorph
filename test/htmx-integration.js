@@ -283,4 +283,120 @@ describe("Tests for the htmx integration", function () {
       '<button id="b1" hx-swap="morph:addAttributes" hx-get="/test2" leave="me" class="" add="me">Foo</button>',
     );
   });
+
+  it("keeps the element stable in an outer morph when upgrading outerHTML to morph", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' hx-swap='outerHTML' hx-get='/test' class='bar'>Foo</button>",
+    );
+    let initialBtn = makeForHtmxTest(
+      "<button id='b1' hx-swap='outerHTML' hx-get='/test'>Foo</button>",
+    );
+    initialBtn.click();
+    this.server.respond();
+    initialBtn.classList.contains("bar").should.equal(true);
+  });
+
+  it("keeps elements stable in an inner morph when upgrading innerHTML to morph:innerHTML", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' class='bar'>Foo</button>",
+    );
+    let div = makeForHtmxTest(
+      "<div hx-swap='innerHTML' hx-get='/test'><button id='b1'>Foo</button></div>",
+    );
+    let initialBtn = document.getElementById("b1");
+    div.click();
+    this.server.respond();
+    let newBtn = document.getElementById("b1");
+    initialBtn.should.equal(newBtn);
+    initialBtn.classList.contains("bar").should.equal(true);
+    div.innerHTML.should.equal(initialBtn.outerHTML);
+  });
+
+  it("does not keep the element stable in an outerHTML swap when morphByDefault false", function () {
+    htmx.config.morphByDefault = false;
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' hx-swap='outerHTML' hx-get='/test' class='bar'>Foo</button>",
+    );
+    let initialBtn = makeForHtmxTest(
+      "<button id='b1' hx-swap='outerHTML' hx-get='/test'>Foo</button>",
+    );
+    initialBtn.click();
+    this.server.respond();
+    delete htmx.config.morphByDefault;
+    initialBtn.classList.contains("bar").should.equal(false);
+  });
+
+  it("does not keep elements stable in an innerHTML swap when morphByDefault false", function () {
+    htmx.config.morphByDefault = false;
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' class='bar'>Foo</button>",
+    );
+    let div = makeForHtmxTest(
+      "<div hx-swap='innerHTML' hx-get='/test'><button id='b1'>Foo</button></div>",
+    );
+    let initialBtn = document.getElementById("b1");
+    div.click();
+    this.server.respond();
+    delete htmx.config.morphByDefault;
+    initialBtn.classList.contains("bar").should.equal(false);
+    div.innerHTML.should.not.equal(initialBtn.outerHTML);
+  });
+
+  it("keeps the element stable in an outer morph when upgrading default of outerHTML to morph", function () {
+    htmx.config.defaultSwapStyle = "outerHTML";
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' hx-get='/test' class='bar'>Foo</button>",
+    );
+    let initialBtn = makeForHtmxTest(
+      "<button id='b1' hx-get='/test'>Foo</button>",
+    );
+    initialBtn.click();
+    this.server.respond();
+    initialBtn.classList.contains("bar").should.equal(true);
+    htmx.config.defaultSwapStyle = "innerHTML";
+  });
+
+  it("keeps the element stable in an outerHTML oob-swap upgraded to morph", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' hx-swap-oob='outerHTML'>Bar</button>",
+    );
+    let div = makeForHtmxTest(
+      "<div hx-get='/test' hx-swap='none'><button id='b1'>Foo</button></div>",
+    );
+    let initialBtn = document.getElementById("b1");
+    div.click();
+    this.server.respond();
+    let newBtn = document.getElementById("b1");
+    initialBtn.should.equal(newBtn);
+    initialBtn.innerHTML.should.equal("Bar");
+  });
+
+  it("keeps the element stable in an true oob-swap upgraded to morph", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      '<button id="b1" hx-swap-oob="true">Bar</button>',
+    );
+    let div = makeForHtmxTest(
+      "<div hx-get='/test' hx-swap='none'><button id='b1'>Foo</button></div>",
+    );
+    let initialBtn = document.getElementById("b1");
+    div.click();
+    this.server.respond();
+    let newBtn = document.getElementById("b1");
+    initialBtn.should.equal(newBtn);
+    initialBtn.innerHTML.should.equal("Bar");
+  });
 });

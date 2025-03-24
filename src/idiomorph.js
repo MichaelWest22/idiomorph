@@ -553,8 +553,8 @@ var Idiomorph = (function () {
       }
 
       morphAttributes(oldNode, newContent, ctx);
-      // @ts-ignore can treat as element as other cases have no children. Only morph children if different content
-      if (oldNode.innerHTML !== newContent.innerHTML) {
+      // @ts-ignore treat as element as other cases have no children. Only morph children if different content or inputs to sync
+      if (ctx.syncInputValue || oldNode.innerHTML !== newContent.innerHTML) {
         // @ts-ignore newContent can be a element here because .firstChild will be null
         morphChildren(ctx, oldNode, newContent);
       }
