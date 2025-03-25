@@ -1,13 +1,13 @@
 {
-  "name": "idiomorph",
-  "description": "an id-based DOM morphing library",
+  "name": "hxiomorph",
+  "description": "an id-based DOM morphing library optimized for htmx",
   "keywords": [
     "HTML"
   ],
-  "version": "0.7.3",
-  "homepage": "https://github.com/bigskysoftware/idiomorph",
+  "version": "0.9.0",
+  "homepage": "https://github.com/MichaelWest22/idiomorph",
   "bugs": {
-    "url": "https://github.com/bigskysoftware/idiomorph/issues"
+    "url": "https://github.com/MichaelWest22/idiomorph/issues"
   },
   "license": "0BSD",
   "files": [
@@ -47,7 +47,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bigskysoftware/idiomorph.git"
+    "url": "git+https://github.com/MichaelWest22/idiomorph.git"
   },
   "devDependencies": {
     "@web/test-runner": "^0.20.0",

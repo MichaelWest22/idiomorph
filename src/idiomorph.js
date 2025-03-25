@@ -893,7 +893,7 @@ var Idiomorph = (function () {
         let finalConfig = defaults;
         if (typeof config == "string") {
           for (const configStr of config.split(",")) {
-            const configVal = configs.get(configStr);
+            const configVal = configs.get(configStr.trim());
             if (configVal) {
               finalConfig = mergeConfig(finalConfig, configVal);
             }
