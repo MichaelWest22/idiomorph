@@ -204,13 +204,10 @@ The new `attributes` option added in Hxiomorph is also useful with oob swaps:
 <div hx-swap-oob="morph;attributes:#id" class="added" hx-get="/updated"></div>
 ```
 
-The last form gives you access to all the configuration options of Idiomorph.  So, for example, if you wanted to ignore
-the input value in a given morph, you could use the following swap specification:
+#### htmx and callbacks
 
-```html
-  <button hx-get="/example" 
-          hx-swap="morph:{ignoreActiveValue:true}"
-          hx-target="closest form">
-      Morph The Closest Form But Ignore The Active Input Value
-  </button>
-```
+To use the advanced callback features inside htmx there are several options. 
+* Use a JS script to set the `Idiomorph.defaults` callbacks functions
+* Use a JS script to call addConfig to create the custom callback and then use `hx-swap="morph:custom"`
+* Use a JS script to add a document.body.addEventListener() and set `eventCallbacks` config to enable it
+* Add a hx-on attribute to body tag like `hx-on-im-before-node-morphed` and set `eventCallbacks` in a meta config tag

@@ -399,4 +399,28 @@ describe("Tests for the htmx integration", function () {
     initialBtn.should.equal(newBtn);
     initialBtn.innerHTML.should.equal("Bar");
   });
+
+  it("xxxxxxxxxxxxxx", function () {
+    this.server.respondWith(
+      "GET",
+      "/test",
+      "<button id='b1' class='bar'>Foo</button>",
+    );
+    let div = makeForHtmxTest(
+      "<div hx-swap='morph:innerHTML' hx-get='/test'><button id='b1'>Foo</button></div>",
+    );
+    Idiomorph.defaults.eventCallbacks = "beforeNodeMorphed";
+    document.body.setAttribute(
+      "hx-on-im-before-node-morphed",
+      "event.preventDefault();",
+    );
+    htmx.process(document.body);
+    let initialBtn = document.getElementById("b1");
+    div.click();
+    this.server.respond();
+    initialBtn.classList.contains("bar").should.equal(false);
+    div.innerHTML.should.equal(initialBtn.outerHTML);
+    document.body.removeAttribute("hx-on-im-before-node-morphed");
+    htmx.process(document.body);
+  });
 });
