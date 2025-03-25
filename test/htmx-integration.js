@@ -400,7 +400,7 @@ describe("Tests for the htmx integration", function () {
     initialBtn.innerHTML.should.equal("Bar");
   });
 
-  it("xxxxxxxxxxxxxx", function () {
+  it("hx-on event callback on body works as expected", function () {
     this.server.respondWith(
       "GET",
       "/test",
