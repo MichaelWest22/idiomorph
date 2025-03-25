@@ -86,7 +86,7 @@ Here is how to set both htmx and idiomorph configs via meta tags:
   <meta name="idiomorph-config" content='{"defaults":{"eventCallbacks": "BeforeNodeMorphed"},"noCallback":{"eventCallbacks": ""}}' />
 </head>
 ```
-This shows how to set the `htmx-config` to have morph as the default swap style and turn off the new morphByDefault feature
+This shows how to set the `htmx-config` to have morph as the default swap style and turn off the new morphByDefault feature.
 The `idiomorph-config` has a key of `defaults` and this allows setting the `Idiomorph.defaults` object. In this case it enables the BeforeNodeMorphed event callback by default.
 You can then add additional optional config keys like the `noCallback` custom option here to disable the event callbacks
 
@@ -148,7 +148,7 @@ The events are all targeted to the document.body element and not to the element 
 
 ```js
 document.body.addEventListener('im-before-node-morphed', function(evt) {
-  if (evt.detail.oldNode.dataset?.preserveMe) evt.preventDefault();;
+  if (evt.detail.oldNode.dataset?.preserveMe) evt.preventDefault();
 });
 ```
 
@@ -159,7 +159,7 @@ the `dist/idiomorph-ext.js` file in your HTML:
 
 ```html
 <script src="idiomorph-ext.min.js"></script>
-<div hx-ext="morph">
+<body hx-ext="morph">
     
     <button hx-get="/example" hx-swap="morph:innerHTML">
         Morph My Inner HTML
@@ -173,7 +173,7 @@ the `dist/idiomorph-ext.js` file in your HTML:
         Morph My Outer HTML
     </button>
     
-</div>
+</body>
 ```
 
 Note that this file includes both Idiomorph and the htmx extension.
@@ -211,3 +211,20 @@ To use the advanced callback features inside htmx there are several options.
 * Use a JS script to call addConfig to create the custom callback and then use `hx-swap="morph:custom"`
 * Use a JS script to add a document.body.addEventListener() and set `eventCallbacks` config to enable it
 * Add a hx-on attribute to body tag like `hx-on-im-before-node-morphed` and set `eventCallbacks` in a meta config tag
+
+```html
+<head>
+  <meta name="htmx-config" content='{"defaultSwapStyle":"morph", "morphByDefault":false}'>
+  <meta name="idiomorph-config" content='{"defaults":{"eventCallbacks": "BeforeNodeMorphed"},"noCallback":{"eventCallbacks": ""}}' />
+  <script src="htmx.min.js"></script>
+  <script src="idiomorph-ext.min.js"></script>
+</head>
+<body hx-ext="morph" hx-on-im-before-node-morphed="if(evt.detail.oldNode.dataset?.preserveMe) evt.preventDefault();">
+  ...
+  <div hx-get="/load" hx-swap="morph" hx-target="body">
+  ...
+  <div data-preserve-me="true" hx-get="/test" hx-swap="morph:noCallback">
+    ...
+  </div>
+<body>
+```
