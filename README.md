@@ -4,7 +4,7 @@ Hxiomorph is a htmx focoused fork of Idiomoprh which is a javascript library and
 
 ## Whats New
 
-Hxiomorph gives you all of the Idiomorph mrophing goodness but with a few simplifications for using it with a htmx project
+Hxiomorph gives you all of the Idiomorph morphing goodness but with a few simplifications for using it with a htmx project
 * Removed custom head support because htmx does not need it. Use head-support htmx extension for better head swapping
 * Removed restoreFocus feature as this is built into htmx already 
 * Removed ignoreActiveValue feature as this is being replaced with better input value handling
@@ -14,12 +14,8 @@ Hxiomorph gives you all of the Idiomorph mrophing goodness but with a few simpli
 * Improved findBestMatch id matching to match old Idiomorph matching behaviour
 * Added Attribute morphing method that morphs just the single nodes attributes without touching inner content
 * Fixed input handling so by default it does not reset input values unless you change them with syncInputValue fallback option
+* Performance Optimization to skip inner children morph when it finds nodes with matching innerHTML.
 * Added morphByDefault override that turns all innerHTML/outerHTML swaps into morphs by default
-
-## Breaking Changes!
-
-* Default input handling no longer updates input values when morhing no changes. Use the syncInputValue option to revert to the old behaviour
-* When used as an htmx extension it now upgrades all innerHTML/outerHTML swaps into morphs which you can turn off with htmx.config.morphByDefault=false
 
 ## API Usage
 
@@ -65,12 +61,14 @@ Hxiomorph supports the following options:
 | option (with default)         | meaning                                                                                                    | example                                                                     |
 |-------------------------------|------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `morphStyle: 'outerHTML'`     | The style of morphing to use, either `outerHTML` or `innerHTML`                                            | `Idiomorph.morph(..., {morphStyle:'innerHTML'})`                            |
-| `ignoreActive: false`         | If `true`, idiomorph will skip the active element                                                          | `Idiomorph.morph(..., {ignoreActive:true})`                                 |
-| `syncInputValue: false`       | If `true`, idiomorph will reset and override all user changed input values just like idiomorph used to do  | `Idiomorph.morph(..., {syncInputValue:true})`                               |
+| `ignoreActive: false`         | If `true`, hxiomorph will skip the active element                                                          | `Idiomorph.morph(..., {ignoreActive:true})`                                 |
+| `syncInputValue: true`        | If `false`, hxiomorph will not reset and override all user changed input values like idiomorph used to     | `Idiomorph.morph(..., {syncInputValue:false})`                              |
 | `callbacks: {...}`            | Allows you to insert callbacks when events occur in the morph lifecycle. See the callback table below      | `Idiomorph.morph(..., {callbacks:{beforeNodeAdded:function(node){...}})`    |
 | `eventCallbacks: ''`          | Allows you list which callbacks should also be implemented as browser events via document event Listeners  | `Idiomorph.morph(..., {eventCallbacks:'beforeNodeAdded,beforeNodeRemoved'})`|
 
-The htmx extension also adds a new htmx config item `htmx.config.morphByDefault` which defaults to on but can be disabled if required by setting to false. When `morphByDefault` is left on all htmx outerHTML/innerHTML swaps and oob-swaps are upgraded to act as equivalent morph operations instead. This applies hxiomorph swapping to your whole page if the extension is placed on the body tag and this can cause input values and other state to not get auto reset and blanked out during swaps. Setting `syncInputValue` option to default to true may be useful if input value resetting is needed.
+The htmx extension also adds a new htmx config item `htmx.config.morphByDefault` which defaults to off but can be enabled if required by setting to `true`. When `morphByDefault` is on all htmx outerHTML/innerHTML swaps and oob-swaps are upgraded to act as equivalent morph operations instead. This applies hxiomorph swapping to your whole page if the extension is placed on the body tag which is a great way to start testing morphing for your whole application.
+
+There is also a new option `syncInputValue` which defaults to the old idiomorph input value syncing behaviour.  With this old behaviour left on the value of all inputs is reset to the value of the new content being morphed each time which means you will always lose any user input changes unless you post all input form values to your server and return their values back in the content being morphed. But it is often best to turn this feature off by setting it to `false` as hxiomorph then performs much faster and it then makes a smarter decision and only updates input values, checkboxes and textareas that you change in value. If however you need forms to reset to defaults during the morph than leave this setting on.
 
 ### Setting Defaults and Configs
 
@@ -82,11 +80,11 @@ For htmx websites config is often configured via a meta tag placed in the head o
 Here is how to set both htmx and idiomorph configs via meta tags:
 ```html
 <head>
-  <meta name="htmx-config" content='{"defaultSwapStyle":"morph", "morphByDefault":false}'>
+  <meta name="htmx-config" content='{"defaultSwapStyle":"morph", "morphByDefault":true}'>
   <meta name="idiomorph-config" content='{"defaults":{"eventCallbacks": "BeforeNodeMorphed"},"noCallback":{"eventCallbacks": ""}}' />
 </head>
 ```
-This shows how to set the `htmx-config` to have morph as the default swap style and turn off the new morphByDefault feature.
+This shows how to set the `htmx-config` to have morph as the default swap style and turn on the new morphByDefault feature.
 The `idiomorph-config` has a key of `defaults` and this allows setting the `Idiomorph.defaults` object. In this case it enables the BeforeNodeMorphed event callback by default.
 You can then add additional optional config keys like the `noCallback` custom option here to disable the event callbacks
 
@@ -158,7 +156,11 @@ Hxiomorph was created to integrate with [htmx](https://htmx.org) and can be used
 the `dist/idiomorph-ext.js` file in your HTML:
 
 ```html
-<script src="idiomorph-ext.min.js"></script>
+<head>
+  <meta name="htmx-config" content='{"defaultSwapStyle":"morph", "morphByDefault":true}'>
+  <script src="htmx.min.js"></script>
+  <script src="idiomorph-ext.min.js"></script>
+</head>
 <body hx-ext="morph">
     
     <button hx-get="/example" hx-swap="morph:innerHTML">
@@ -176,7 +178,7 @@ the `dist/idiomorph-ext.js` file in your HTML:
 </body>
 ```
 
-Note that this file includes both Idiomorph and the htmx extension.
+Note that this file includes both Hxiomorph and the htmx extension.
 
 #### Configuring Morphing Behavior in htmx
 
@@ -214,8 +216,8 @@ To use the advanced callback features inside htmx there are several options.
 
 ```html
 <head>
-  <meta name="htmx-config" content='{"defaultSwapStyle":"morph", "morphByDefault":false}'>
-  <meta name="idiomorph-config" content='{"defaults":{"eventCallbacks": "BeforeNodeMorphed"},"noCallback":{"eventCallbacks": ""}}' />
+  <meta name="htmx-config" content='{"defaultSwapStyle":"morph", "morphByDefault":true}'>
+  <meta name="idiomorph-config" content='{"defaults":{"syncInputValue": false, "eventCallbacks": "BeforeNodeMorphed"},"noCallback":{"eventCallbacks": ""}}' />
   <script src="htmx.min.js"></script>
   <script src="idiomorph-ext.min.js"></script>
 </head>

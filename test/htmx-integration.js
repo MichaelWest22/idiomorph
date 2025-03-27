@@ -285,6 +285,7 @@ describe("Tests for the htmx integration", function () {
   });
 
   it("keeps the element stable in an outer morph when upgrading outerHTML to morph", function () {
+    htmx.config.morphByDefault = true;
     this.server.respondWith(
       "GET",
       "/test",
@@ -295,10 +296,12 @@ describe("Tests for the htmx integration", function () {
     );
     initialBtn.click();
     this.server.respond();
+    delete htmx.config.morphByDefault;
     initialBtn.classList.contains("bar").should.equal(true);
   });
 
   it("keeps elements stable in an inner morph when upgrading innerHTML to morph:innerHTML", function () {
+    htmx.config.morphByDefault = true;
     this.server.respondWith(
       "GET",
       "/test",
@@ -310,6 +313,7 @@ describe("Tests for the htmx integration", function () {
     let initialBtn = document.getElementById("b1");
     div.click();
     this.server.respond();
+    delete htmx.config.morphByDefault;
     let newBtn = document.getElementById("b1");
     initialBtn.should.equal(newBtn);
     initialBtn.classList.contains("bar").should.equal(true);
@@ -351,6 +355,7 @@ describe("Tests for the htmx integration", function () {
   });
 
   it("keeps the element stable in an outer morph when upgrading default of outerHTML to morph", function () {
+    htmx.config.morphByDefault = true;
     htmx.config.defaultSwapStyle = "outerHTML";
     this.server.respondWith(
       "GET",
@@ -362,11 +367,13 @@ describe("Tests for the htmx integration", function () {
     );
     initialBtn.click();
     this.server.respond();
+    delete htmx.config.morphByDefault;
     initialBtn.classList.contains("bar").should.equal(true);
     htmx.config.defaultSwapStyle = "innerHTML";
   });
 
   it("keeps the element stable in an outerHTML oob-swap upgraded to morph", function () {
+    htmx.config.morphByDefault = true;
     this.server.respondWith(
       "GET",
       "/test",
@@ -378,12 +385,14 @@ describe("Tests for the htmx integration", function () {
     let initialBtn = document.getElementById("b1");
     div.click();
     this.server.respond();
+    delete htmx.config.morphByDefault;
     let newBtn = document.getElementById("b1");
     initialBtn.should.equal(newBtn);
     initialBtn.innerHTML.should.equal("Bar");
   });
 
   it("keeps the element stable in an true oob-swap upgraded to morph", function () {
+    htmx.config.morphByDefault = true;
     this.server.respondWith(
       "GET",
       "/test",
@@ -395,6 +404,7 @@ describe("Tests for the htmx integration", function () {
     let initialBtn = document.getElementById("b1");
     div.click();
     this.server.respond();
+    delete htmx.config.morphByDefault;
     let newBtn = document.getElementById("b1");
     initialBtn.should.equal(newBtn);
     initialBtn.innerHTML.should.equal("Bar");

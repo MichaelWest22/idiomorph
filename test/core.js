@@ -344,11 +344,14 @@ describe("Core morphing tests", function () {
     initial.firstChild.value.should.equal("foo");
   });
 
-  it("can morph textarea value to the same without changing value", function () {
+  it("can morph textarea value to the same without changing value if syncInputValue false", function () {
     let initial = make("<textarea>foo</textarea>");
     let final = make("<textarea>foo</textarea>");
     initial.value = "bar";
-    Idiomorph.morph(initial, final);
+    Idiomorph.morph(initial, final, {
+      morphStyle: "outerHTML",
+      syncInputValue: false,
+    });
     initial.value.should.equal("bar");
   });
 
@@ -363,11 +366,11 @@ describe("Core morphing tests", function () {
     initial.value.should.equal("foo");
   });
 
-  it("can morph textarea and updates if changing value", function () {
+  it("can morph textarea and updates if changing value if syncInputValue false", function () {
     let initial = make("<textarea>foo</textarea>");
     let final = make("<textarea>foo2</textarea>");
     initial.value = "bar";
-    Idiomorph.morph(initial, final);
+    Idiomorph.morph(initial, final, { syncInputValue: false });
     initial.value.should.equal("foo2");
   });
 
@@ -408,14 +411,14 @@ describe("Core morphing tests", function () {
     document.body.removeChild(parent);
   });
 
-  it("can morph input checked properly, when checked does not reset checkbox state when no change", function () {
+  it("can morph input checked properly, when checked does not reset checkbox state when no change if syncInputValue false", function () {
     let parent = make('<div><input type="checkbox" checked></div>');
     document.body.append(parent);
     let initial = parent.querySelector("input");
     initial.checked = false;
 
     let finalSrc = '<input type="checkbox" checked>';
-    Idiomorph.morph(initial, finalSrc);
+    Idiomorph.morph(initial, finalSrc, { syncInputValue: false });
     initial.outerHTML.should.equal('<input type="checkbox" checked="">');
     initial.checked.should.equal(false);
     document.body.removeChild(parent);
@@ -434,14 +437,14 @@ describe("Core morphing tests", function () {
     document.body.removeChild(parent);
   });
 
-  it("can morph input checked properly, when not checked does not reset checkbox state when no change", function () {
+  it("can morph input checked properly, when not checked does not reset checkbox state when no change if syncInputValue false", function () {
     let parent = make('<div><input type="checkbox"></div>');
     document.body.append(parent);
     let initial = parent.querySelector("input");
     initial.checked = true;
 
     let finalSrc = '<input type="checkbox">';
-    Idiomorph.morph(initial, finalSrc);
+    Idiomorph.morph(initial, finalSrc, { syncInputValue: false });
     initial.outerHTML.should.equal('<input type="checkbox">');
     initial.checked.should.equal(true);
     document.body.removeChild(parent);
@@ -490,7 +493,7 @@ describe("Core morphing tests", function () {
       .should.eql([true, false]);
   });
 
-  it("can morph <select> remove selected option properly", function () {
+  it("can morph <select> remove selected option properly if syncInputValue false", function () {
     let parent = make(`
       <div>
         <select>
@@ -514,7 +517,10 @@ describe("Core morphing tests", function () {
           <option>1</option>
         </select>
       `;
-    Idiomorph.morph(parent, finalSrc, { morphStyle: "innerHTML" });
+    Idiomorph.morph(parent, finalSrc, {
+      morphStyle: "innerHTML",
+      syncInputValue: false,
+    });
     parent.innerHTML.should.equal(`
         <select>
           <option>0</option>
