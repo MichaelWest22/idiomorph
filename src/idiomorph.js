@@ -15,7 +15,7 @@
  *
  * @property {'outerHTML' | 'innerHTML' | 'attributes'} [morphStyle]
  * @property {boolean} [ignoreActive]
- * @property {boolean} [syncInputValue]
+ * @property {boolean} [keepInputValues]
  * @property {string} [eventCallbacks]
  * @property {ConfigCallbacks} [callbacks]
  */
@@ -43,7 +43,7 @@
  *
  * @property {'outerHTML' | 'innerHTML' | 'attributes'} morphStyle
  * @property {boolean} [ignoreActive]
- * @property {boolean} [syncInputValue]
+ * @property {boolean} [keepInputValues]
  * @property {string} [eventCallbacks]
  * @property {ConfigCallbacksInternal} callbacks
 
@@ -80,7 +80,7 @@ var Idiomorph = (function () {
    * @property {ConfigInternal} config
    * @property {ConfigInternal['morphStyle']} morphStyle
    * @property {ConfigInternal['ignoreActive']} ignoreActive
-   * @property {ConfigInternal['syncInputValue']} syncInputValue
+   * @property {ConfigInternal['keepInputValues']} keepInputValues
    * @property {Map<Node, Set<string>>} idMap
    * @property {Set<string>} persistentIds
    * @property {ConfigInternal['callbacks']} callbacks
@@ -554,7 +554,7 @@ var Idiomorph = (function () {
 
       morphAttributes(oldNode, newContent, ctx);
       // @ts-ignore treat as element as other cases have no children. Only morph children if different content or inputs to sync
-      if (ctx.syncInputValue || oldNode.innerHTML !== newContent.innerHTML) {
+      if (!ctx.keepInputValues || oldNode.innerHTML !== newContent.innerHTML) {
         // @ts-ignore newContent can be a element here because .firstChild will be null
         morphChildren(ctx, oldNode, newContent);
       }
@@ -605,7 +605,7 @@ var Idiomorph = (function () {
           }
         }
 
-        if (ctx.syncInputValue) {
+        if (!ctx.keepInputValues) {
           syncInputValue(oldElt, newElt, ctx);
         } else if (
           oldElt instanceof HTMLTextAreaElement &&
@@ -764,7 +764,7 @@ var Idiomorph = (function () {
           config: mergedConfig,
           morphStyle: morphStyle,
           ignoreActive: mergedConfig.ignoreActive,
-          syncInputValue: mergedConfig.syncInputValue,
+          keepInputValues: mergedConfig.keepInputValues,
           idMap: idMap,
           persistentIds: persistentIds,
           pantry: createPantry(),
@@ -863,7 +863,6 @@ var Idiomorph = (function () {
             afterNodeRemoved: noOp,
             beforeAttributeUpdated: noOp,
           },
-          syncInputValue: true,
           eventCallbacks: "", //"beforeNodeAdded,afterNodeAdded,beforeNodeMorphed,afterNodeMorphed,beforeNodeRemoved,afterNodeRemoved,beforeAttributeUpdated",
         };
 

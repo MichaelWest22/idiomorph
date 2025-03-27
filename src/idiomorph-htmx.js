@@ -53,7 +53,7 @@
   Idiomorph.addConfig("outerHTML", { morphStyle: "outerHTML" });
   Idiomorph.addConfig("innerHTML", { morphStyle: "innerHTML" });
   Idiomorph.addConfig("ignoreActive", { ignoreActive: true });
-  Idiomorph.addConfig("syncInputValue", { syncInputValue: true });
+  Idiomorph.addConfig("keepInputValues", { keepInputValues: true });
   Idiomorph.addConfig("attributes", { morphStyle: "attributes" });
   Idiomorph.addConfig("removeAttributes", {
     morphStyle: "attributes",

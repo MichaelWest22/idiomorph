@@ -13,7 +13,7 @@ Hxiomorph gives you all of the Idiomorph morphing goodness but with a few simpli
 * Adding meta tag based config definition to mirror htmx config method
 * Improved findBestMatch id matching to match old Idiomorph matching behaviour
 * Added Attribute morphing method that morphs just the single nodes attributes without touching inner content
-* Fixed input handling so by default it does not reset input values unless you change them with syncInputValue fallback option
+* Fixed input handling with option that does not reset input values unless you change them called keepInputValues
 * Performance Optimization to skip inner children morph when it finds nodes with matching innerHTML.
 * Added morphByDefault override that turns all innerHTML/outerHTML swaps into morphs by default
 
@@ -62,13 +62,13 @@ Hxiomorph supports the following options:
 |-------------------------------|------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `morphStyle: 'outerHTML'`     | The style of morphing to use, either `outerHTML` or `innerHTML`                                            | `Idiomorph.morph(..., {morphStyle:'innerHTML'})`                            |
 | `ignoreActive: false`         | If `true`, hxiomorph will skip the active element                                                          | `Idiomorph.morph(..., {ignoreActive:true})`                                 |
-| `syncInputValue: true`        | If `false`, hxiomorph will not reset and override all user changed input values like idiomorph used to     | `Idiomorph.morph(..., {syncInputValue:false})`                              |
+| `keepInputValues: false`      | If `true`, hxiomorph will not reset and override all user changed input values like idiomorph normaly does | `Idiomorph.morph(..., {keepInputValues:true})`                              |
 | `callbacks: {...}`            | Allows you to insert callbacks when events occur in the morph lifecycle. See the callback table below      | `Idiomorph.morph(..., {callbacks:{beforeNodeAdded:function(node){...}})`    |
 | `eventCallbacks: ''`          | Allows you list which callbacks should also be implemented as browser events via document event Listeners  | `Idiomorph.morph(..., {eventCallbacks:'beforeNodeAdded,beforeNodeRemoved'})`|
 
 The htmx extension also adds a new htmx config item `htmx.config.morphByDefault` which defaults to off but can be enabled if required by setting to `true`. When `morphByDefault` is on all htmx outerHTML/innerHTML swaps and oob-swaps are upgraded to act as equivalent morph operations instead. This applies hxiomorph swapping to your whole page if the extension is placed on the body tag which is a great way to start testing morphing for your whole application.
 
-There is also a new option `syncInputValue` which defaults to the old idiomorph input value syncing behaviour.  With this old behaviour left on the value of all inputs is reset to the value of the new content being morphed each time which means you will always lose any user input changes unless you post all input form values to your server and return their values back in the content being morphed. But it is often best to turn this feature off by setting it to `false` as hxiomorph then performs much faster and it then makes a smarter decision and only updates input values, checkboxes and textareas that you change in value. If however you need forms to reset to defaults during the morph than leave this setting on.
+There is also a new option `keepInputValues` which allows overriding the old idiomorph input value syncing behaviour. With the old behaviour the value of all inputs is reset to the value of the new content being morphed each time which means you will always lose any user input changes unless you post all input form values to your server and return their values back in the content being morphed. But it is often best to turn this new feature on by setting it to `true` as hxiomorph then performs much faster and it then makes a smarter decision and only updates input values, checkboxes and textareas that you change in value. If however you need forms to reset to defaults during the morph than leave this setting off.
 
 ### Setting Defaults and Configs
 
@@ -188,11 +188,11 @@ The Hxiomorph extension for htmx supports a new simplified syntax:
 * `hx-swap='morph:outerHTML'` - This will perform a morph on the outerHTML of the target (explicit)
 * `hx-swap='morph:innerHTML'` - This will perform a morph on the innerHTML of the target (i.e. the children)
 * `hx-swap='morph:ignoreActive'` - A default (outerHTML) morph but avoid changing the active element
-* `hx-swap='morph:syncInputValue'` - A default (outerHTML) morph but also overwrite all input values like the original idiomorph does
+* `hx-swap='morph:keepInputValues'` - A default (outerHTML) morph but also applies the option to keep user changed input values during morph
 * `hx-swap='morph:attributes'` - This will perform a morph of just the attributes of the top node targeted while leaving child content alone
 * `hx-swap='morph:addAttributes'` - Same as attributes but it only adds attributes that are missing from the original content node
 * `hx-swap='morph:removeAttributes'` - Same as attributes but it only removes attributes that are missing from the new content node
-* `hx-swap='morph:innerHTML, ignoreActive, syncInputValue'` - You can combine multiple options or custom configs via a comma seperated list
+* `hx-swap='morph:innerHTML, ignoreActive, keepInputValues'` - You can combine multiple options or custom configs via a comma seperated list
 
 For `hx-swap-oob` the `:` character is already used as a seperator so for these replace it with a `;`
 
@@ -217,7 +217,7 @@ To use the advanced callback features inside htmx there are several options.
 ```html
 <head>
   <meta name="htmx-config" content='{"defaultSwapStyle":"morph", "morphByDefault":true}'>
-  <meta name="idiomorph-config" content='{"defaults":{"syncInputValue": false, "eventCallbacks": "BeforeNodeMorphed"},"noCallback":{"eventCallbacks": ""}}' />
+  <meta name="idiomorph-config" content='{"defaults":{"keepInputValues": true, "eventCallbacks": "BeforeNodeMorphed"},"noCallback":{"eventCallbacks": ""}}' />
   <script src="htmx.min.js"></script>
   <script src="idiomorph-ext.min.js"></script>
 </head>
