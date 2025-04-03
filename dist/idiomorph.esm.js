@@ -863,6 +863,7 @@ var Idiomorph = (function () {
             afterNodeRemoved: noOp,
             beforeAttributeUpdated: noOp,
           },
+          keepInputValues: true,
           eventCallbacks: "", //"beforeNodeAdded,afterNodeAdded,beforeNodeMorphed,afterNodeMorphed,beforeNodeRemoved,afterNodeRemoved,beforeAttributeUpdated",
         };
 
