@@ -8,7 +8,7 @@
         return swapStyle.slice(1);
       }
     } else if (
-      htmx.config.morphByDefault !== false &&
+      htmx.config.morphByDefault === true &&
       swapStyle == "innerHTML"
     ) {
       return { morphStyle: "innerHTML" };
@@ -31,13 +31,13 @@
       }
     },
     transformResponse: function (text, xhr, elt) {
-      if (htmx.config.morphByDefault === false) return text;
+      if (htmx.config.morphByDefault !== true) return text;
       return text
         .replace(/hx-swap-oob="(true|outerHTML)/gi, 'hx-swap-oob="morph')
         .replace(/hx-swap-oob='(true|outerHTML)/gi, "hx-swap-oob='morph");
     },
     onEvent: function (name, evt) {
-      if (htmx.config.morphByDefault !== false && name === "htmx:beforeSwap") {
+      if (htmx.config.morphByDefault === true && name === "htmx:beforeSwap") {
         if (htmx.config.defaultSwapStyle === "outerHTML")
           htmx.config.defaultSwapStyle = "morph";
         let swapStyle =
@@ -53,7 +53,7 @@
   Idiomorph.addConfig("outerHTML", { morphStyle: "outerHTML" });
   Idiomorph.addConfig("innerHTML", { morphStyle: "innerHTML" });
   Idiomorph.addConfig("ignoreActive", { ignoreActive: true });
-  Idiomorph.addConfig("syncInputValue", { syncInputValue: true });
+  Idiomorph.addConfig("keepInputValues", { keepInputValues: true });
   Idiomorph.addConfig("attributes", { morphStyle: "attributes" });
   Idiomorph.addConfig("removeAttributes", {
     morphStyle: "attributes",
