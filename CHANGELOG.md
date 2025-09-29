@@ -5,6 +5,12 @@
 * Removed:
   * Remove AMD publish target since its EOL: https://github.com/requirejs/requirejs/issues/1816#issuecomment-707503323
 
+## [0.7.4] - 2025-09-29
+
+* Fixed:
+  * Optimize focus preservation checking for big perf win (@botandrose) #137
+  * Fix incorrect morph when elements contain attributes like name="id" (@botandrose, @kobutri) #136
+
 ## [0.7.3] - 2025-03-05
 
 * Fixed:
