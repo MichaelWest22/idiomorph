@@ -740,4 +740,23 @@ describe("Core morphing tests", function () {
     // included in the persistent ID set or it will pantry the id'ed node in error
     initial.outerHTML.should.equal("<span>Bar</span>");
   });
+
+  it("updates input when value attribute changes even with user input with keepInputValues true", function () {
+    let parent = make('<div><input value="foo"></div>');
+    document.body.append(parent);
+    let initial = parent.querySelector("input");
+    
+    initial.value = "userTyped";
+    
+    let finalSrc = '<input value="newServerValue">';
+    Idiomorph.morph(initial, finalSrc, { 
+      morphStyle: "outerHTML",
+      keepInputValues: true 
+    });
+    
+    initial.value.should.equal("newServerValue");
+    initial.getAttribute("value").should.equal("newServerValue");
+    
+    document.body.removeChild(parent);
+  });
 });

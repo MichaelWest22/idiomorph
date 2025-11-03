@@ -649,12 +649,13 @@ var Idiomorph = (function () {
           ctx,
         );
       } else {
-        morphAttributes(oldNode, newContent, ctx);
-        if (!ignoreValueOfActiveElement(oldNode, ctx)) {
-          // Only morph children if keepInputValues is false or innerHTML has changed
-          if (!ctx.keepInputValues || oldNode.innerHTML !== newContent.innerHTML) {
-            // @ts-ignore newContent can be a node here because .firstChild will be null
-            morphChildren(ctx, oldNode, newContent);
+        if (!ctx.keepInputValues || !oldNode.isEqualNode(newContent)) {
+          morphAttributes(oldNode, newContent, ctx);
+          if (!ignoreValueOfActiveElement(oldNode, ctx)) {
+            if (!ctx.keepInputValues || !oldNode.isEqualNode(newContent)) {
+              // @ts-ignore newContent can be a node here because .firstChild will be null
+              morphChildren(ctx, oldNode, newContent);
+            }
           }
         }
       }
@@ -687,6 +688,12 @@ var Idiomorph = (function () {
           }
           if (oldElt.getAttribute(newAttribute.name) !== newAttribute.value) {
             oldElt.setAttribute(newAttribute.name, newAttribute.value);
+            // With keepInputValues, update input.value when value attribute changes
+            if (ctx.keepInputValues && newAttribute.name === "value" && 
+                oldElt instanceof HTMLInputElement && newElt instanceof HTMLInputElement &&
+                newElt.type !== "file" && !ignoreValueOfActiveElement(oldElt, ctx)) {
+              oldElt.value = newElt.value;
+            }
           }
         }
         // iterate backwards to avoid skipping over items when a delete occurs
