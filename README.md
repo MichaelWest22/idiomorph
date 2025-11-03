@@ -126,7 +126,7 @@ The `keepInputValues` option provides a way to preserve user input values during
 * Input elements (text, checkbox, radio, etc.) will retain their current values instead of being updated to match the new content
 * Textarea elements will preserve their current content
 * Child morphing is skipped when the innerHTML hasn't changed, improving performance
-* Only textarea elements with changed `defaultValue` will have their values updated
+* Only inputs and textarea elements with a changed default value will have their values updated
 
 This is particularly useful in scenarios where:
 - Users are typing in forms and you want to update other parts of the page without losing their input
