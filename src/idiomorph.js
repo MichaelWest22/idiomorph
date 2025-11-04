@@ -689,9 +689,14 @@ var Idiomorph = (function () {
           if (oldElt.getAttribute(newAttribute.name) !== newAttribute.value) {
             oldElt.setAttribute(newAttribute.name, newAttribute.value);
             // With keepInputValues, update input.value when value attribute changes
-            if (ctx.keepInputValues && newAttribute.name === "value" && 
-                oldElt instanceof HTMLInputElement && newElt instanceof HTMLInputElement &&
-                newElt.type !== "file" && !ignoreValueOfActiveElement(oldElt, ctx)) {
+            if (
+              ctx.keepInputValues &&
+              newAttribute.name === "value" &&
+              oldElt instanceof HTMLInputElement &&
+              newElt instanceof HTMLInputElement &&
+              newElt.type !== "file" &&
+              !ignoreValueOfActiveElement(oldElt, ctx)
+            ) {
               oldElt.value = newElt.value;
             }
           }

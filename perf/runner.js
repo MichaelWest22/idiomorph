@@ -19,7 +19,8 @@ if (benchmarks.length === 0) {
 }
 
 benchmarks.forEach((benchmark) => {
-  const keepInputValues = process.env.KEEP_INPUT_VALUES === "true" ? "&keepInputValues=true" : "";
+  const keepInputValues =
+    process.env.KEEP_INPUT_VALUES === "true" ? "&keepInputValues=true" : "";
   const config = {
     root: "..",
     benchmarks: [

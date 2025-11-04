@@ -33,7 +33,9 @@
     if (params.get("using").includes("morphdom")) {
       morphdom(document.body.firstElementChild, end);
     } else {
-      Idiomorph.morph(document.body.firstElementChild, end, { keepInputValues });
+      Idiomorph.morph(document.body.firstElementChild, end, {
+        keepInputValues,
+      });
     }
     bench.stop();
   });
